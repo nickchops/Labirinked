@@ -167,6 +167,7 @@ function GameBoard:getAvailableMoves(x, y, moves)
     local moveCount = 0
     local possibleMoves = {}
     for k,move in pairs(moves) do
+        --get tile move would go onto
         if move == "up" then
             tile = self.board[(y+1)*self.maxTilesWide+x]
         elseif move == "right" then
@@ -178,19 +179,23 @@ function GameBoard:getAvailableMoves(x, y, moves)
         end
         
         if tile then
-            local entrySides = tilePaths[tile.tileType][tile.direction] --eg {"down", "up"}
+            --get list of sides this tile has exits on
+            local entrySides = tilePaths[tile.tileType][tile.rotation] --eg {"down", "up"}
             local success = false
             
+            --matching entry/exit sides means move is valid
             for k,dir in pairs(entrySides) do
                 if move == "up" and dir == "down" then success = true end
                 if move == "right" and dir == "left" then success = true end
                 if move == "down" and dir == "up" then success = true end
                 if move == "left" and dir == "right" then success = true end
-            end
-            
-            if success then
-                moveCount = moveCount + 1
-                table.insert(possibleMoves, {tile=tile, dir=move})
+                
+                if success then
+                    dbg.print("board: found move: " .. tile.tileType .. " dir" ..move)
+                    moveCount = moveCount + 1
+                    table.insert(possibleMoves, {tile=tile, dir=move})
+                    break
+                end
             end
         end
     end

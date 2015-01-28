@@ -1,9 +1,9 @@
 -------------------------------------------------------------------
 -- Debugging --
 
-debugOn = false
+debugOn = true
 
-require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
+--require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 
 -------------------------------------------------------------------
 

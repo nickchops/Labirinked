@@ -1,7 +1,8 @@
 
 Tile = inheritsFrom(baseClass)
 
-tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
+--tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
+tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime"}
 tileTypeCount = 0
 for k,v in pairs(tileTypes) do
     tileTypeCount = tileTypeCount + 1
@@ -11,7 +12,7 @@ end
 -- 0 = the image's rotation in file
 -- Doesn't indicate the direction of actual travel
 tileRotations = { floor={1}, corner={1,2,3,4}, road={1,2}, bridge={1},
-        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend ={1} }
+        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1} }
 
 --Directions a tile of each type lets you move off of it.
 --corner: "up" is curve from bottom to right!
@@ -30,30 +31,30 @@ tilePaths = { floor={{"up","left","down","right"}},
           }
 
 --x and y are screen positions since doesnt usually start on the grid
-function Tile:init(x, y, tileType, direction, tileWidth)
+function Tile:init(x, y, tileType, rotation, tileWidth)
     
-    if not tileRotations[tileType][direction] then direction = tileRotations[tileType][1] end
+    if not tileRotations[tileType][rotation] then rotation = tileRotations[tileType][1] end
     
     self.tileType = tileType
-    self.direction = direction
+    self.rotation = rotation
     self.x = x
     self.y = y
     
     local suffix
     if tileType == "bridge" then
-        if direction == 1 then
+        if rotation == 1 then
             suffix = "-horiz"
         else
             suffix = "-vert" --doesnt exist yet but wont ever be hit
         end
     elseif tileType == "stairAscend" then
-        if direction == 1 or direction == 3 then
+        if rotation == 1 or rotation == 3 then
             suffix = "-horiz"
         else
-            suffix = direction --also doesnt exist
+            suffix = rotation --also doesnt exist
         end
     --elseif tileType == THINGS WITH UNIQUE IMAGES FOR EACH ROTATION then
-    --    suffix = direction
+    --    suffix = rotation
     else
         suffix = "" --one image that is just rotated!
     end
