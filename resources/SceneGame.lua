@@ -85,9 +85,9 @@ function addTileToQueue(event)
     end
     
     if slot % 2 == 1 then
-        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2
+        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2 - 20
     else
-        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2
+        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 20
     end
     
     local newType = tileTypes[math.random(1, tileTypeCount)]
@@ -145,8 +145,8 @@ function sceneGame:startPlay()
     if backButtonHelper.added then
         backButtonHelper:enable()
     else
-        backButtonHelper:add({listener=self.quit, xCentre=130, yCentre=60, btnWidth=150,
-                btnTexture=btnTexture, pulse=false, activateOnRelease=true, animatePress=true,
+        backButtonHelper:add({listener=self.quit, xCentre=100, yCentre=75, btnWidth=80,
+                btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
                 deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
         
         if backButtonHelper.backBtn then -- in case we change to non-visible on Android etc!
@@ -161,7 +161,25 @@ function sceneGame:startPlay()
     tween:to(player1.sprite, {alpha = 1, time=1.0, delay=1.0})
     tween:to(player2.sprite, {alpha = 1, time=1.0, delay=1.0})
     
+    self.levelTimer = director:createNode({x=appWidth/2, y=menuHeight/2})
+    self.timerLabel = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
+            xScale=1.5, yScale=1.5})
+    self.levelTimer:addChild(self.timerLabel)
+    self.levelTimer.label = self.timerLabel
+    self.levelTimer:addTimer(self.levelTimerFunc, 1.0, gameInfo.levelTime)
+    tween:to(self.levelTimer, {xScale=1, yScale=1, time=0.9})
+    
     --softPad:activate()
+end
+
+function sceneGame.levelTimerFunc(event)
+    event.target.xScale = 1.5
+    event.target.yScale = 1.5
+    if gameInfo.levelTime - event.doneIterations == 9 then
+        event.target.label.x = event.target.label.x/2
+    end
+    tween:to(event.target, {xScale=1, yScale=1, time=0.9})
+    event.target.label.text = gameInfo.levelTime - event.doneIterations
 end
 
 function sceneGame:pausePlay()
@@ -220,7 +238,7 @@ function sceneGame:touch(event)
             xGrid, yGrid = board:getNearestGridPos(x,y)
             if board:hasTile(xGrid, yGrid) then
                 for k,player in pairs(players) do
-                    if player.phase == "ready" and board:isAdjacentToPlayer(xGrid, yGrid, player, true) then
+                    if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
                         player.phase = "changingTilePos" --TODO: not using this yet. will check animating/moving
                         finger.phase = "placingTile"
                         finger.dragTile = board:getAndRemoveTile(xGrid, yGrid)

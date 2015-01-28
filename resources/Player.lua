@@ -5,6 +5,7 @@ function Player:init(playerNumber, board)
     self.id = playerNumber
     self.sprite = director:createSprite({x=0, y=0, source="textures/player.png", alpha=0.7})
     setDefaultSize(self.sprite, board.tileWidth*0.5)
+    self.sprite.centreOffset = getWidth(self.sprite)/2
     self.board = board
     self.phase="ready"
     self.offset = getWidth(self.sprite)/2
@@ -31,7 +32,7 @@ function Player:setGridPos(x,y)
     self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y)
     self.sprite.x = self.sprite.x - self.offset
     self.sprite.y = self.sprite.y - self.offset
-    self.sprite.zOrder = board:getPlayerDepth(x,y) + 1
+    self.sprite.zOrder = board:getPlayerDepth(x,y)
 end
 
 function Player:addPossibleMoves(moves)
@@ -112,11 +113,13 @@ function Player:tryToMove()
     self:addPossibleMoves(newMoves)
     
     --make move
-    self.x = tile.startGridX
-    self.y = tile.startGridY
+    self.x = tile.gridX
+    self.y = tile.gridY
     local targetX
     local targetY
     targetX, targetY = board:getScreenPosCentre(self.x, self.y)
+    
+    board:setVisited(self.x, self.y)
     
     -- hacky temporary make bridges work
     if tile.tileType == "bridge" then
@@ -124,13 +127,26 @@ function Player:tryToMove()
     end
     
     self.sprite.player = self
-    tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, onComplete = reactivatePlayer})
+    tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, time=1, onComplete = reactivatePlayer})
     --TODO: set height and zOrder depending on tile height!
+    
+    Player.drawPath({target=self.sprite})
+    self.sprite:addTimer(Player.drawPath, 0.33, 2)
     
     dbg.print("------------------------------------------")
     return true
 end
 
+function Player.drawPath(event)
+    local crossSize = getWidth(event.target) *0.4
+    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=event.target.x+event.target.centreOffset, y=event.target.y+event.target.centreOffset, w=crossSize, h=crossSize/4, color={0,0,100}, strokeWidth=0, rotation=45, zOrder=event.target.zOrder+1, alpha=0.7})
+    tween:from(cross, {alpha=0, time=0.2, onComplete=Player.drawCross2})
+end
+
+function Player.drawCross2(target)
+    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=target.x, y=target.y, w=target.w, h=target.h, color=target.color, rotation=135, strokeWidth=0, zOrder=target.zOrder-1, alpha=0.7})
+    tween:from(cross, {alpha=0, time=0.1})
+end
 
 function reactivatePlayer(target)
     -- try to move recursively; return control once fails

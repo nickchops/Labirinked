@@ -16,6 +16,7 @@ GameBoard = inheritsFrom(baseClass)
 -- grid positions start at 0,0
 function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debugDraw)
     self.board = {}
+    self.boardVisited = {}
     self.widthOnScreen = widthOnScreen
     self.startWidth = widthOnScreen
     self.tileWidth = widthOnScreen/tilesWide
@@ -50,9 +51,17 @@ end
 -- add Tile at position. Simple sparse row*column matrix as a table
 function GameBoard:addTile(x,y,tile)
     self.board[y*self.maxTilesWide+x] = tile
-    tile.startGridX = x
-    tile.startGridY = y
+    tile.gridX = x
+    tile.gridY = y
     self:setDepth(tile)
+end
+
+function GameBoard:setVisited(x,y)
+    self.boardVisited[y*self.maxTilesWide+x] = true
+end
+
+function GameBoard:isVisited(x,y)
+    return self.boardVisited[y*self.maxTilesWide+x]
 end
 
 function GameBoard:addNewTileToGrid(gridX, gridY, tileType, rotation)
@@ -67,11 +76,11 @@ function GameBoard:addNewTileToGrid(gridX, gridY, tileType, rotation)
 end
 
 function GameBoard:setDepth(tile)
-    tile.sprite.zOrder = self.tilesHigh - tile.startGridY
+    tile.sprite.zOrder = self.tilesHigh - tile.gridY
 end
 
 function GameBoard:getPlayerDepth(x,y)
-    return self.tilesHigh - y + 2
+    return self.tilesHigh - y + 2 --allow 1 pos between player and tile
 end
 -- input: grid pos starting at zero. output: screen position
 function GameBoard:getScreenPosCentre(x,y)
@@ -161,6 +170,16 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
     end
 end
 
+function GameBoard:canTakeTile(x, y, player)
+    if isVisited(x,y) then return false end
+    
+    if player then
+        return isAdjacentToPlayer(x, y, player, true)
+    else
+        return isAdjacentToPlayers(x, y, true)
+    end
+end
+
 function GameBoard:getAvailableMoves(x, y, moves)
     local cell = self.board[y*self.maxTilesWide+x]
     local tile
@@ -178,7 +197,7 @@ function GameBoard:getAvailableMoves(x, y, moves)
             tile = self.board[y*self.maxTilesWide+x-1]
         end
         
-        if tile then
+        if tile and not self:isVisited(tile.gridX, tile.gridY) then
             --get list of sides this tile has exits on
             local entrySides = tilePaths[tile.tileType][tile.rotation] --eg {"down", "up"}
             local success = false

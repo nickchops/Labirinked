@@ -3,7 +3,7 @@
 
 debugOn = true
 
---require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
+require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 
 -------------------------------------------------------------------
 
@@ -35,6 +35,7 @@ lineColor = {0,0,0}
 titleCol = lineColor
 btnCol = color.aliceBlue
 btnTexture = "textures/button1.png"
+btnBackTexture = "textures/button2.png"
 btnTextureShort = "textures/shortGoldButton.png"
 titleMusic = "sounds/labirink.mp3"
 gameMusic = nil
@@ -46,6 +47,7 @@ gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winloose = "loose"
+gameInfo.levelTime = 60
 -- name is hard coded in this example, could be extended to some entry system or game service login
 
 gameInfo.scores = {}

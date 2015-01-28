@@ -92,7 +92,7 @@ end
 function tilePlaced(target)
     local tile = target.tile
     if not tile.startSlot then
-        board:addTile(tile.startGridX, tile.startGridY, tile)
+        board:addTile(tile.gridX, tile.gridY, tile)
     
         if target.player then
             target.player:tryToMove()
@@ -118,14 +118,14 @@ function Tile:setGridTarget(gridX, gridY, nearPlayer)
             -- prob do this by leaving this as-is and setting the startSlot val elsewhere...
             local targetX
             local targetY
-            targetX, targetY = board:getScreenPos(self.startGridX, self.startGridY)
+            targetX, targetY = board:getScreenPos(self.gridX, self.gridY)
             tween:to(self.sprite, {x=targetX, y=targetY, time=0.2, onComplete=tilePlaced})
         end
         return false, false
     else
         --to new grid position
-        self.startGridX = gridX
-        self.startGridY = gridY
+        self.gridX = gridX
+        self.gridY = gridY
         local targetX
         local targetY
         targetX, targetY = board:getScreenPos(gridX,gridY)

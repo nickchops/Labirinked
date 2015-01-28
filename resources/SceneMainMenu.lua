@@ -73,12 +73,12 @@ function sceneMainMenu:setUp(event)
     self.backgroundLogo.x = self.backgroundLogo.x-self.backgroundLogo.w/2
     
     self.mainMenu = director:createNode({x=appWidth/2,y=appHeight-150})
-    --self.mainMenu.titleOutline = director:createLines({x=0, y=0, coords={-200,-50, -200,50, 200,50, 200,-50, -200,-50},
+    --self.mainMenu.title = director:createLines({x=0, y=0, coords={-200,-50, -200,50, 200,50, 200,-50, -200,-50},
     --        strokeWidth=4, strokeColor=titleCol, alpha=0, strokeAlpha = 0.65})
 
-    self.mainMenu.titleOutline = director:createSprite(-150, -30, "textures/title.png")
-    self.mainMenu:addChild(self.mainMenu.titleOutline)
-    setDefaultSize(self.mainMenu.titleOutline, 300)
+    self.mainMenu.title = director:createSprite(-150, -30, "textures/title.png")
+    self.mainMenu:addChild(self.mainMenu.title)
+    setDefaultSize(self.mainMenu.title, 300)
     --self.mainMenu.titleText = director:createLabel({x=-125, y=-27, w=400, h=100,
     --        hAlignment="left", vAlignment="bottom", text="LABIRINKED", color=titleCol, font=fontMain, xScale=2, yScale=2})
     --self.mainMenu:addChild(self.mainMenu.titleText)
@@ -86,11 +86,11 @@ function sceneMainMenu:setUp(event)
     -- main menu buttons
     self.btns = {}
 
-    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, touchStart)
+    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, sceneMainMenu.touchStart)
 
-    sceneMainMenu:addButton("sound", "text", "Sound: on", -300, -380, 140, touchSound, 70)
+    sceneMainMenu:addButton("sound", "text", "Sound: on", -300, -380, 140, sceneMainMenu.touchSound, 70)
     
-    sceneMainMenu:addButton("credits", "image", "menu_credits.png", 300, -380, 140, touchCredits)
+    sceneMainMenu:addButton("credits", "image", "menu_credits.png", 300, -380, 140, sceneMainMenu.touchCredits)
 
     if not gameInfo.soundOn then
         self.btns.sound.alpha = 0.5
@@ -98,7 +98,7 @@ function sceneMainMenu:setUp(event)
     end
 
     if useQuitButton then
-        sceneMainMenu:addButton("quit", "text", "Quit", -300, -450, 140, touchQuit, 140)
+        sceneMainMenu:addButton("quit", "text", "Quit", -300, -450, 140, sceneMainMenu.touchQuit, 140)
     end
     
     self.background.alpha=0
@@ -219,27 +219,33 @@ end
 
 ---- Button handlers ----------------------------------------------------------
 
-function menuStartGame()
+function sceneMainMenu.startGame()
     --director:moveToScene(sceneWinLose, {transitionType="slideInR", transitionTime=0.8}) --for testing
     director:moveToScene(sceneGame, {transitionType="slideInR", transitionTime=0.8})
     --audio:stopStream()
 end
 
-function menuShowCredits()
+function sceneMainMenu.showCredits()
     director:moveToScene(sceneCredits, {transitionType="slideInR", transitionTime=0.8})
 end
 
-function touchStart(self, event)
+function sceneMainMenu:fadeOut()
+    cancelTweensOnNode(self.background)
+    tween:to(self.background, {alpha=0, time=0.2})
+    tween:to(self, {alpha=0, time=0.4})
+    for k,v in pairs (self.btns) do
+        tween:to(v, {alpha=0, time=0.4})
+    end
+    tween:to(self.mainMenu.title, {alpha=0, time=0.4})
+end
+
+function sceneMainMenu.touchStart(self, event)
     if event.phase == "ended" then
         disableMainMenu()
         local btnScale = sceneMainMenu.btns.start.defaultScaleX
         tween:to(sceneMainMenu.btns.start, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
-        tween:to(sceneMainMenu.btns.start, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=menuStartGame})
-        cancelTweensOnNode(sceneMainMenu.background)
-        tween:to(sceneMainMenu.background, {alpha=0, time=0.2})
-        tween:to(sceneMainMenu, {alpha=0, time=0.4})
-        tween:to(sceneMainMenu.btns["credits"], {alpha=0, time=0.4})
-        tween:to(sceneMainMenu.mainMenu.titleOutline, {alpha=0, time=0.4})
+        tween:to(sceneMainMenu.btns.start, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=sceneMainMenu.startGame})
+        sceneMainMenu:fadeOut()
     end
 end
 
@@ -253,7 +259,7 @@ function touchScores(self, event)
     end
 end
 
-function touchSound(self, event)
+function sceneMainMenu.touchSound(self, event)
     if event.phase == "ended" then
         if gameInfo.soundOn then
             audio:stopStream()
@@ -272,25 +278,23 @@ function touchSound(self, event)
 end
 
 
-function touchQuit(self, event)
+function sceneMainMenu.touchQuit(self, event)
     if event.phase == "ended" then
         saveUserData() -- save settings
         local btnScale = sceneMainMenu.btns.quit.defaultScaleX
         tween:to(sceneMainMenu.btns.quit, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
         tween:to(sceneMainMenu.btns.quit, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=shutDownApp})
+        sceneMainMenu:fadeOut()
     end
 end
 
-function touchCredits(self, event)
+function sceneMainMenu.touchCredits(self, event)
     if event.phase == "ended" then
         disableMainMenu()
         local btnScale = sceneMainMenu.btns.credits.defaultScaleX
         tween:to(sceneMainMenu.btns.credits, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
-        tween:to(sceneMainMenu.btns.credits, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=menuShowCredits})
-        cancelTweensOnNode(sceneMainMenu.background)
-        tween:to(sceneMainMenu.background, {alpha=0, time=0.2})
-        tween:to(sceneMainMenu, {alpha=0, time=0.4})
-        tween:to(sceneMainMenu.mainMenu.titleOutline, {strokeAlpha=0, time=0.4})
+        tween:to(sceneMainMenu.btns.credits, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=sceneMainMenu.showCredits})
+        sceneMainMenu:fadeOut()
     end
 end
 
@@ -317,14 +321,14 @@ function menuDisplayHighScores(target)
 end
 
 function menuHighScoresShown(target)
-    sceneMainMenu:addBackButton(menuCloseHighScores)
+    --TODO: add back button
 end
 
 function menuCloseHighScores(event)
     if event.phase == "ended" then
         destroyNodesInTree(sceneMainMenu.scoreLabels, true)
         sceneMainMenu.scoreLabels = nil
-        sceneMainMenu:removeBackButton(menuCloseHighScores)
+        --TODO: remove back button 
 
         tween:to(sceneMainMenu.mainMenu, {x=appWidth/2, time=0.5, onComplete=enableMainMenu})
     end
@@ -339,34 +343,6 @@ function menuBackKeyListener(event)
         sceneMainMenu.backKeyListener({phase="ended"})
     end
 end
-
-function sceneMainMenu:addBackButton(listener)
-    sceneMainMenu.backKeyListener = listener
-    system:addEventListener("key", menuBackKeyListener) -- allow key to press button
-
-    self.backBtn = director:createSprite({x=appWidth/2, y=115, xAnchor=0.5, yAnchor=0.5, source=btnTexture, color=btnCol})
-    self.backBtn.xScale = btnScale
-    self.backBtn.yScale = btnScale
-
-    self.backBtn:addChild(director:createLines({x=btnW/2, y=btnH/2, coords={-15,20, -35,0, -15,-20, -15,-10, 35,-10, 35,10, -15,10, -15,20}, strokeColor=textCol, alpha=0, strokeWidth=5}))
-
-    self.backBtn:addEventListener("touch", listener)
-    tween:to(self.backBtn, {xScale=btnScale*1.1, yScale=btnScale*1.1, time=1.0, mode="mirror"})
-end
-
-function sceneMainMenu:removeBackButton(listener)
-    if not self.backBtn then
-        dbg.print("Tried to remove non existant back button")
-        return
-    end
-
-    system:removeEventListener("key", menuBackKeyListener)
-
-    self.backBtn:removeEventListener("touch", listener)
-    destroyNodesInTree(self.backBtn, true)
-    self.backBtn = nil
-end
-
 
 ---- Save/load data -----------------------------------------------------------
 
