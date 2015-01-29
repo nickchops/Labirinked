@@ -11,15 +11,15 @@ KeyAbsBSK=Esc
 
 IOSDispScaleFactor=200
 
-WinWidth=1024
-WinHeight=768
+#WinWidth=1024
+#WinHeight=768
 
 {OS=WINDOWS}
 #Windowing options for desktop builds
 #WinAllowAltEnter=1
 #WinFullScreen=1
-#WinFullScreenHeight=1440
-#WinFullScreenWidth=2160
+#WinFullScreenHeight=1024
+#WinFullScreenWidth=768
 #WinRefresh=0
 #WinResizable=0
 #WinTitle="W R O N G"

@@ -35,7 +35,7 @@ function sceneMainMenu:startup()
         
         tween:from(self.mainMenu, {alpha=0, time=2.0, onComplete=enableMainMenu})
         local delay = 0.3
-        for k,v in pairs(self.btns) do
+        for k,v in ipairs(self.btnsOrdered) do
             tween:to(v, {alpha=1, time=0.5, delay=delay})
             if v.label then
                 tween:to(v.label, {alpha=1, time=0.5, delay=delay})
@@ -84,14 +84,12 @@ function sceneMainMenu:setUp(event)
     --self.mainMenu:addChild(self.mainMenu.titleText)
 
     -- main menu buttons
+    -- will fade on in order created
     self.btns = {}
-
-    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, sceneMainMenu.touchStart)
+    self.btnsOrdered = {}
 
     sceneMainMenu:addButton("sound", "text", "Sound: on", -300, -380, 140, sceneMainMenu.touchSound, 70)
     
-    sceneMainMenu:addButton("credits", "image", "menu_credits.png", 300, -380, 140, sceneMainMenu.touchCredits)
-
     if not gameInfo.soundOn then
         self.btns.sound.alpha = 0.5
         self.btns.sound.label.text = "Sound: off"
@@ -99,7 +97,11 @@ function sceneMainMenu:setUp(event)
 
     if useQuitButton then
         sceneMainMenu:addButton("quit", "text", "Quit", -300, -450, 140, sceneMainMenu.touchQuit, 140)
-    end
+    end    
+    
+    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, sceneMainMenu.touchStart)
+
+    sceneMainMenu:addButton("credits", "image", "menu_credits.png", 300, -380, 140, sceneMainMenu.touchCredits)
     
     self.background.alpha=0
     self.backgroundLines.alpha=0
@@ -132,6 +134,7 @@ function sceneMainMenu:exitPostTransition(event)
     destroyNodesInTree(self.mainMenu, true)
     self.mainMenu = nil
     self.btns = nil
+    self.btnsOrdered = nil
 
     self.background:removeFromParent()
     self.background = nil
@@ -165,6 +168,8 @@ function sceneMainMenu:addButton(name, btnType, textOrImage, btnX, btnY, w, touc
         self.btns[name] = director:createSprite({x=btnX, y=btnY, xAnchor=0.5, yAnchor=0.5, source="textures/" .. textOrImage, alpha=0.9})
         setDefaultSize(self.btns[name], w)
     end
+    
+    table.insert(self.btnsOrdered, self.btns[name])
 
     self.mainMenu:addChild(self.btns[name])
     self.btns[name].touch = touchListener

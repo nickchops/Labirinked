@@ -26,19 +26,19 @@ function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debu
     self.heightOnScreen = self.tilesHigh * self.tileWidth
     self.maxTilesWide = maxTilesWide
     self.startHeight = self.tileWidth * self.tilesHigh
-    self.board.origin = director:createNode({x=appWidth/2 - self.startWidth/2,
+    self.origin = director:createNode({x=appWidth/2 - self.startWidth/2,
             y= menuHeight + (appHeight-menuHeight)/2 - self.startHeight/2})
     self.menuHeight = menuHeight
     
     self.debugDraw = debugDraw
     if debugDraw then
-        director:createRectangle({xAnchor=0, yAnchor=0, x=self.board.origin.x, y=self.board.origin.y, alpha=0, strokeWidth=2, strokeAlpha=0.5,
+        director:createRectangle({xAnchor=0, yAnchor=0, x=self.origin.x, y=self.origin.y, alpha=0, strokeWidth=2, strokeAlpha=0.5,
                 strokeColor=color.red, w=self.widthOnScreen, h=self.heightOnScreen})
         
         for i=0,self.tilesHigh-1 do
             for j=0,self.tilesWide-1 do
-                director:createCircle({x=self.board.origin.x + j*self.tileWidth+self.halfTile,
-                        y = self.board.origin.y + i*self.tileWidth+self.halfTile,
+                director:createCircle({x=self.origin.x + j*self.tileWidth+self.halfTile,
+                        y = self.origin.y + i*self.tileWidth+self.halfTile,
                         alpha=0, strokeWidth=2, strokeAlpha=0.5, strokeColor=color.blue, radius=3})
             end
         end
@@ -84,18 +84,18 @@ function GameBoard:getPlayerDepth(x,y)
 end
 -- input: grid pos starting at zero. output: screen position
 function GameBoard:getScreenPosCentre(x,y)
-    return self.board.origin.x + self.tileWidth*x + self.halfTile,
-            self.board.origin.y + self.tileWidth*y + self.halfTile
+    return self.origin.x + self.tileWidth*x + self.halfTile,
+            self.origin.y + self.tileWidth*y + self.halfTile
 end
 
 function GameBoard:getScreenPos(x,y)
-    return self.board.origin.x + self.tileWidth*x,
-            self.board.origin.y + self.tileWidth*y
+    return self.origin.x + self.tileWidth*x,
+           self.origin.y + self.tileWidth*y
 end
 
 function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
-    x = math.floor((x-self.board.origin.x)/self.tileWidth)
-    y = math.floor((y-self.board.origin.y)/self.tileWidth)
+    x = math.floor((x-self.origin.x)/self.tileWidth)
+    y = math.floor((y-self.origin.y)/self.tileWidth)
     
     if y < 0 then
         return -1, -1 
@@ -107,6 +107,7 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
     
     local nearPlayer
     if tileToCheckIsValid then
+        --if near both players, returns first found
         nearPlayer = self:isValidMove(x, y, tileToCheckIsValid)
         if not nearPlayer then
             return -1,-1
@@ -180,7 +181,7 @@ function GameBoard:canTakeTile(x, y, player)
     end
 end
 
-function GameBoard:getAvailableMoves(x, y, moves)
+function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
     local cell = self.board[y*self.maxTilesWide+x]
     local tile
     local moveCount = 0
@@ -197,23 +198,28 @@ function GameBoard:getAvailableMoves(x, y, moves)
             tile = self.board[y*self.maxTilesWide+x-1]
         end
         
-        if tile and not self:isVisited(tile.gridX, tile.gridY) then
-            --get list of sides this tile has exits on
-            local entrySides = tilePaths[tile.tileType][tile.rotation] --eg {"down", "up"}
-            local success = false
-            
-            --matching entry/exit sides means move is valid
-            for k,dir in pairs(entrySides) do
-                if move == "up" and dir == "down" then success = true end
-                if move == "right" and dir == "left" then success = true end
-                if move == "down" and dir == "up" then success = true end
-                if move == "left" and dir == "right" then success = true end
+        if tile then
+            if otherPlayer.x == tile.gridX and otherPlayer.y == tile.gridY then
+                -- -1 indicates level complete, returns just the target tile b ut not actually using that atm
+                return -1, tile
+            elseif not self:isVisited(tile.gridX, tile.gridY) then
+                --get list of sides this tile has exits on
+                local entrySides = tilePaths[tile.tileType][tile.rotation] --eg {"down", "up"}
+                local success = false
                 
-                if success then
-                    dbg.print("board: found move: " .. tile.tileType .. " dir" ..move)
-                    moveCount = moveCount + 1
-                    table.insert(possibleMoves, {tile=tile, dir=move})
-                    break
+                --matching entry/exit sides means move is valid
+                for k,dir in pairs(entrySides) do
+                    if move == "up" and dir == "down" then success = true end
+                    if move == "right" and dir == "left" then success = true end
+                    if move == "down" and dir == "up" then success = true end
+                    if move == "left" and dir == "right" then success = true end
+                    
+                    if success then
+                        dbg.print("board: found move: " .. tile.tileType .. " dir" .. move)
+                        moveCount = moveCount + 1
+                        table.insert(possibleMoves, {tile=tile, dir=move})
+                        break
+                    end
                 end
             end
         end
@@ -227,4 +233,14 @@ function GameBoard:getReverse(dir)
     if dir == "down" then return "up" end
     if dir == "left" then return "right" end
     if dir == "right" then return "left" end
+end
+
+function GameBoard:fadeOut(onComplete, duration)
+    for k,tile in pairs(self.board) do
+        dbg.print("fadeout: " .. k )
+        dbg.print(tile.gridX .. " " .. tile.gridY)
+        dbg.print(tile.tileType)
+        tween:to(tile.sprite, {alpha=0, time=duration*0.6})
+    end
+    system:addTimer(onComplete, duration, 1)
 end

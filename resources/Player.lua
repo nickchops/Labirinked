@@ -1,7 +1,7 @@
 
 Player = inheritsFrom(baseClass)
 
-function Player:init(playerNumber, board)
+function Player:init(playerNumber, board, otherPlayer)
     self.id = playerNumber
     self.sprite = director:createSprite({x=0, y=0, source="textures/player.png", alpha=0.7})
     setDefaultSize(self.sprite, board.tileWidth*0.5)
@@ -9,6 +9,7 @@ function Player:init(playerNumber, board)
     self.board = board
     self.phase="ready"
     self.offset = getWidth(self.sprite)/2
+    self.otherPlayer = otherPlayer
     
     if playerNumber == 1 then
         self.sprite.color = color.pink
@@ -26,13 +27,15 @@ function Player:init(playerNumber, board)
     self.returnStackSize = 0
 end
 
-function Player:setGridPos(x,y)
+function Player:setGridPos(x,y, positionSprite)
     self.x = x
     self.y = y
-    self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y)
-    self.sprite.x = self.sprite.x - self.offset
-    self.sprite.y = self.sprite.y - self.offset
     self.sprite.zOrder = board:getPlayerDepth(x,y)
+    if positionSprite then
+        self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y)
+        self.sprite.x = self.sprite.x - self.offset
+        self.sprite.y = self.sprite.y - self.offset
+    end
 end
 
 function Player:addPossibleMoves(moves)
@@ -58,9 +61,40 @@ function Player:tryToMove()
     -- gets list of valid moves - i.e where directions above match tiles
     -- player can move onto (joins match)
     -- moveList constains destination tile and direction to move onto that tile
-    moveCount, moveList = board:getAvailableMoves(self.x, self.y, moves)
+    moveCount, moveList = board:getAvailableMoves(self.x, self.y, moves, self.otherPlayer)
     
-    if moveCount == 0 then
+    if moveCount == -1 then
+        dbg.print("LEVEL COMPLETE! animating out...")
+        -- stop play, move players towards eachother, sceneGame will take care of ending the level
+        sceneGame:levelCleared()
+        
+        local targetX
+        local targetY
+        local otherTargetX
+        local otherTargetY
+        
+        if self.sprite.x > self.otherPlayer.sprite.x then
+            targetX = self.otherPlayer.sprite.x + (self.sprite.x - self.otherPlayer.sprite.x)*0.75
+            otherTargetX = self.otherPlayer.sprite.x + (self.sprite.x - self.otherPlayer.sprite.x)*0.25
+        else
+            targetX = self.sprite.x + (self.otherPlayer.sprite.x - self.sprite.x)*0.25
+            otherTargetX = self.sprite.x + (self.otherPlayer.sprite.x - self.sprite.x)*0.75
+        end
+        
+        if self.sprite.y > self.otherPlayer.sprite.y then
+            targetY = self.otherPlayer.sprite.y + (self.sprite.y - self.otherPlayer.sprite.y)*0.75
+            otherTargetY = self.otherPlayer.sprite.y + (self.sprite.y - self.otherPlayer.sprite.y)*0.25
+        else
+            targetY = self.sprite.y + (self.otherPlayer.sprite.y - self.sprite.y)*0.25
+            otherTargetY = self.sprite.y + (self.otherPlayer.sprite.y - self.sprite.y)*0.75
+        end
+        
+        --bounce forever until level ends
+        tween:to(self.sprite, {x = targetX, y = targetY, time=1, onComplete = Player.bounce, delay=0.2})
+        tween:to(self.otherPlayer.sprite, {x = otherTargetX, y = otherTargetY, time=1, onComplete = Player.bounce})
+        
+        return true
+    elseif moveCount == 0 then
         dbg.print("NO MOVES FOUND!")
         self.phase = "ready"
         dbg.print("------------------------------------------")
@@ -113,13 +147,16 @@ function Player:tryToMove()
     self:addPossibleMoves(newMoves)
     
     --make move
-    self.x = tile.gridX
-    self.y = tile.gridY
+    self:setGridPos(tile.gridX, tile.gridY, false)
+    board:setVisited(self.x, self.y)
+    
+    --tile logic - TODO: add more here!
+    tile:process(player)
+    
+    --animate
     local targetX
     local targetY
     targetX, targetY = board:getScreenPosCentre(self.x, self.y)
-    
-    board:setVisited(self.x, self.y)
     
     -- hacky temporary make bridges work
     if tile.tileType == "bridge" then
@@ -127,7 +164,7 @@ function Player:tryToMove()
     end
     
     self.sprite.player = self
-    tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, time=1, onComplete = reactivatePlayer})
+    tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, time=1, onComplete = Player.reactivatePlayer})
     --TODO: set height and zOrder depending on tile height!
     
     Player.drawPath({target=self.sprite})
@@ -148,9 +185,14 @@ function Player.drawCross2(target)
     tween:from(cross, {alpha=0, time=0.1})
 end
 
-function reactivatePlayer(target)
+function Player.reactivatePlayer(target)
     -- try to move recursively; return control once fails
     if not target.player:tryToMove() then
         target.player.phase = "ready"
     end
+end
+
+function Player.bounce(target)
+    dbg.print("bounce!")
+    tween:to(target, {y=target.y+15, mode="mirror", easing=ease.bounceInOut})
 end

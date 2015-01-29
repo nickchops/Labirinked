@@ -1,8 +1,9 @@
 
 Tile = inheritsFrom(baseClass)
 
---tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
-tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime"}
+tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
+--tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime"}
+
 tileTypeCount = 0
 for k,v in pairs(tileTypes) do
     tileTypeCount = tileTypeCount + 1
@@ -30,6 +31,8 @@ tilePaths = { floor={{"up","left","down","right"}},
               stairAscend={{"left","right"}}
           }
 
+tileAlpha = 0.9
+
 --x and y are screen positions since doesnt usually start on the grid
 function Tile:init(x, y, tileType, rotation, tileWidth)
     
@@ -39,32 +42,52 @@ function Tile:init(x, y, tileType, rotation, tileWidth)
     self.rotation = rotation
     self.x = x
     self.y = y
+    self.posOffset = tileWidth/2
     
+    self:createSprite(self.x - self.posOffset, self.y - self.posOffset, 0)
+    --centre pos on when creating and fade in, e.g. in queue
+end
+
+function Tile:process(player)
+    if self.tileType == "extratime" then
+        sceneGame:incrementTimer(5)
+    
+        self.sprite:removeFromParent()
+        self.tileType = "floor"
+        self.sprite = self:createSprite(self.x, self.y) --position back where it already was
+    end
+end
+
+function Tile:createSprite(x,y,startAlpha)
+    startAlpha = startAlpha or tileAlpha
     local suffix
-    if tileType == "bridge" then
-        if rotation == 1 then
+    if self.tileType == "bridge" then
+        if self.rotation == 1 then
             suffix = "-horiz"
         else
             suffix = "-vert" --doesnt exist yet but wont ever be hit
         end
-    elseif tileType == "stairAscend" then
-        if rotation == 1 or rotation == 3 then
+    elseif self.tileType == "stairAscend" then
+        if self.rotation == 1 or self.rotation == 3 then
             suffix = "-horiz"
         else
             suffix = rotation --also doesnt exist
         end
-    --elseif tileType == THINGS WITH UNIQUE IMAGES FOR EACH ROTATION then
+    --elseif self.tileType == THINGS WITH UNIQUE IMAGES FOR EACH ROTATION then
     --    suffix = rotation
     else
         suffix = "" --one image that is just rotated!
     end
     
-    self.imageType = tileType .. suffix
-    self.posOffset = tileWidth/2
+    self.imageType = self.tileType .. suffix
     
-    self.sprite = director:createSprite(x - self.posOffset, y - self.posOffset, "textures/tile-" .. self.imageType .. ".png")
-    setDefaultSize(self.sprite, tileWidth)
-    self.sprite.alpha=0.9
+    self.sprite = director:createSprite(x, y, "textures/tile-" .. self.imageType .. ".png")
+    setDefaultSize(self.sprite, self.posOffset*2)
+    self.sprite.alpha=startAlpha
+    
+    if self.gridY then
+        board:setDepth(self)
+    end
 end
 
 function Tile:canRotate()
@@ -116,20 +139,16 @@ function Tile:setGridTarget(gridX, gridY, nearPlayer)
             --TODO: allow to go back to queue if came from board by finding next empty slot
             -- for now, jsut always return to where it came from
             -- prob do this by leaving this as-is and setting the startSlot val elsewhere...
-            local targetX
-            local targetY
-            targetX, targetY = board:getScreenPos(self.gridX, self.gridY)
-            tween:to(self.sprite, {x=targetX, y=targetY, time=0.2, onComplete=tilePlaced})
+            self.x, self.Y = board:getScreenPos(self.gridX, self.gridY)
+            tween:to(self.sprite, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         end
         return false, false
     else
         --to new grid position
         self.gridX = gridX
         self.gridY = gridY
-        local targetX
-        local targetY
-        targetX, targetY = board:getScreenPos(gridX,gridY)
-        tween:to(self.sprite, {x=targetX, y=targetY, time=0.2, onComplete=tilePlaced})
+        self.x, self.y = board:getScreenPos(gridX,gridY)
+        tween:to(self.sprite, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         
         if self.startSlot then
             local oldSlot = self.startSlot

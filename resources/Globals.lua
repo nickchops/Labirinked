@@ -1,7 +1,8 @@
 -------------------------------------------------------------------
 -- Debugging --
 
-debugOn = true
+debugOn = false
+--debugTileTypes = {"floor"}
 
 require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 

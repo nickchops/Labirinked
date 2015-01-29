@@ -11,6 +11,7 @@ sceneGame = director:createScene()
 sceneGame.name = "game"
 
 menuHeight = 130
+tileQueueY = menuHeight/3+10
 
 function sceneGame:setUp(event)
     virtualResolution:applyToScene(self)
@@ -19,7 +20,6 @@ function sceneGame:setUp(event)
 
     self.background = director:createSprite(0, 0, "textures/paper-1024.png")
     self.background.alpha=0.2
-    tween:to(self.background, {alpha=1, time=1.5})
     setDefaultSize(self.background, screenWidth, screenHeight)
     self.background.x = screenMinX
     self.background.y = screenMinY
@@ -35,7 +35,7 @@ function sceneGame:setUp(event)
     tileQueue = {}
     tileQueueMax = 4
     tileQueueSize = 0
-    tileQueueY = menuHeight/3+10
+    
     tileXSpace = 20
 
     board = GameBoard:create()
@@ -43,8 +43,8 @@ function sceneGame:setUp(event)
     
     player1 = Player:create()
     player2 = Player:create()
-    player1:init(1,board)
-    player2:init(2,board)
+    player1:init(1,board,player2)
+    player2:init(2,board,player1)
     
     players = {}
     players[1] = player1
@@ -54,13 +54,13 @@ function sceneGame:setUp(event)
     fingers[1] = {id=1, phase="ready"}
     fingers[2] = {id=2, phase="ready"}
     
-    player1:setGridPos(0,board.tilesHigh-1)
+    player1:setGridPos(0,board.tilesHigh-1, true)
     self.startTile1 = board:addNewTileToGrid(player1.x, player1.y, "floor", 1)
     player1:addPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
-    player2:setGridPos(board.tilesWide-1,0)
+    player2:setGridPos(board.tilesWide-1,0, true)
     self.startTile2 = board:addNewTileToGrid(player2.x, player2.y, "floor", 1)
     player2:addPossibleMoves({"up","left"})
     player2.sprite.alpha=0
@@ -85,9 +85,9 @@ function addTileToQueue(event)
     end
     
     if slot % 2 == 1 then
-        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2 - 20
+        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2 - 40
     else
-        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 20
+        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 40
     end
     
     local newType = tileTypes[math.random(1, tileTypeCount)]
@@ -96,9 +96,15 @@ function addTileToQueue(event)
     newTile.startY = tileQueueY
     newTile.startSlot = slot --indicates it's in the queue or being dragged about but not just put onto the grid
     newTile.available = false
-    tween:from(newTile.sprite, {alpha=0, time=0.5, onComplete=activateTile})
+    tween:to(newTile.sprite, {alpha=tileAlpha, time=0.5, onComplete=activateTile})
     newTile.sprite.tile = newTile
     tileQueue[slot] = newTile
+end
+
+function sceneGame:tileQueueFadeOut(onComplete, duration)
+    for k,tile in pairs(tileQueue) do
+        tween:to(tile.sprite, {alpha=0, time=duration})
+    end
 end
 
 function activateTile(target)
@@ -106,8 +112,7 @@ function activateTile(target)
 end
 
 function sceneGame:enterPostTransition(event)
-    system:addTimer(addTileToQueue, 0.3, 4)
-    sceneGame:startPlay()
+    tween:to(self.background, {alpha=1, time=1, onComplete=sceneGame.showPieces})
 end
 
 function sceneGame:exitPreTransition(event)
@@ -141,45 +146,62 @@ sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
 -- Main logic
 
 
-function sceneGame:startPlay()
-    if backButtonHelper.added then
-        backButtonHelper:enable()
-    else
-        backButtonHelper:add({listener=self.quit, xCentre=100, yCentre=75, btnWidth=80,
-                btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
-                deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
-        
-        if backButtonHelper.backBtn then -- in case we change to non-visible on Android etc!
-            tween:from(backButtonHelper.backBtn, {alpha=0, time=0.2})
-        end
+function sceneGame.showPieces()
+    local self = sceneGame
+    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55, btnWidth=80,
+            btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
+            deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
+    
+    if backButtonHelper.backBtn then -- in case we change to non-visible on Android etc!
+        tween:from(backButtonHelper.backBtn, {alpha=0, time=0.2})
     end
     
-    system:addEventListener({"suspend", "resume", "update", "touch"}, self)
+    system:addTimer(addTileToQueue, 0.3, 4)
     
-    tween:to(self.startTile1.sprite, {alpha = 1, time=1.0, delay=0.5})
-    tween:to(self.startTile2.sprite, {alpha = 1, time=1.0, delay=0.5})
+    tween:to(self.startTile1.sprite, {alpha = tileAlpha, time=1.0, delay=0.5, onComplete=sceneGame.startPlay})
+    tween:to(self.startTile2.sprite, {alpha = tileAlpha, time=1.0, delay=0.5})
     tween:to(player1.sprite, {alpha = 1, time=1.0, delay=1.0})
     tween:to(player2.sprite, {alpha = 1, time=1.0, delay=1.0})
     
-    self.levelTimer = director:createNode({x=appWidth/2, y=menuHeight/2})
-    self.timerLabel = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
+    self.levelTimerNode = director:createNode({x=appWidth/2, y=tileQueueY})
+    self.levelTimerNode.label = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
             xScale=1.5, yScale=1.5})
-    self.levelTimer:addChild(self.timerLabel)
-    self.levelTimer.label = self.timerLabel
-    self.levelTimer:addTimer(self.levelTimerFunc, 1.0, gameInfo.levelTime)
-    tween:to(self.levelTimer, {xScale=1, yScale=1, time=0.9})
+    self.levelTimerNode:addChild(self.levelTimerNode.label)
+    self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.levelTime)
+    tween:to(self.levelTimerNode, {xScale=1, yScale=1, time=0.9})
+    gameInfo.timeLeft = gameInfo.levelTime
     
     --softPad:activate()
 end
 
+function sceneGame.startPlay()
+    system:addEventListener({"touch"}, sceneGame)
+    backButtonHelper:enable()
+end
+
 function sceneGame.levelTimerFunc(event)
+    gameInfo.timeLeft = gameInfo.timeLeft - 1
+    event.target.label.text = gameInfo.timeLeft
     event.target.xScale = 1.5
     event.target.yScale = 1.5
-    if gameInfo.levelTime - event.doneIterations == 9 then
+    
+    if gameInfo.timeLeft == 9 then
         event.target.label.x = event.target.label.x/2
     end
-    tween:to(event.target, {xScale=1, yScale=1, time=0.9})
-    event.target.label.text = gameInfo.levelTime - event.doneIterations
+    
+    if gameInfo.timeLeft <= 0 then
+        sceneGame:pausePlay()
+        board:fadeOut(sceneGame.gotoWinLose, 5)
+        sceneGame:tileQueueFadeOut(3)
+    else
+        tween:to(event.target, {xScale=1, yScale=1, time=0.9})
+    end
+end
+
+function sceneGame:incrementTimer(time)
+    self.levelTimer:cancel()
+    gameInfo.timeLeft = gameInfo.timeLeft + time
+    self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.timeLeft)
 end
 
 function sceneGame:pausePlay()
@@ -194,6 +216,21 @@ function createTile(screenX, screenY, tileType, rotation)
     tile:init(screenX, screenY, tileType, rotation, board.tileWidth)
     tile.sprite.zOrder=board.tilesHigh+1
     return tile
+end
+
+function sceneGame.gotoWinLose()
+    audio:stopStream()
+    system:removeEventListener({"suspend", "resume", "update"}, sceneGame)
+    pauseNodesInTree(sceneGame)
+    backButtonHelper:disable()
+    director:moveToScene(sceneWinLose, {transitionType="slideInL", transitionTime=0.8})
+end
+
+function sceneGame:levelCleared()
+    sceneGame:pausePlay()
+    gameInfo.winLose = "win"
+    board:fadeOut(sceneGame.gotoWinLose, 7)
+    self:tileQueueFadeOut(3)
 end
 
 -----------------------------------------------------------------
@@ -237,13 +274,17 @@ function sceneGame:touch(event)
             local yGrid
             xGrid, yGrid = board:getNearestGridPos(x,y)
             if board:hasTile(xGrid, yGrid) then
+                local gotTile --tile can be valid for both players (but doesnt mean we've won!)
                 for k,player in pairs(players) do
                     if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
                         player.phase = "changingTilePos" --TODO: not using this yet. will check animating/moving
                         finger.phase = "placingTile"
-                        finger.dragTile = board:getAndRemoveTile(xGrid, yGrid)
-                        finger.dragTile.player = player
-                        break
+                        if not gotTile then
+                            gotTile = board:getAndRemoveTile(xGrid, yGrid)
+                        end
+                        finger.dragTile = gotTile
+                        if not finger.dragTile.player then finger.dragTile.player={} end
+                        table.insert(finger.dragTile.player, player)
                     end
                 end
             end
@@ -267,7 +308,9 @@ function sceneGame:touch(event)
                 updatedPlayer.phase = "waitingForMove"
             else
                 if finger.dragTile.player then
-                finger.dragTile.player.phase = "ready"
+                    for k,player in pairs(finger.dragTile.player) do
+                        player.phase = "ready"
+                    end
                 end
             end
             

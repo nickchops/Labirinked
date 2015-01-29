@@ -8,3 +8,5 @@ development.icf
 iwtrace.txt
 **/source-assets/**
 **/code-drop/**
+MiniDump.dmp
+*.bak
