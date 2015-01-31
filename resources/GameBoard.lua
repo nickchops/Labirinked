@@ -105,16 +105,18 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
     if x > self.tilesWide-1 then x = self.tilesWide-1 end
     if y > self.tilesHigh-1 then y = self.tilesHigh-1 end
     
-    local nearPlayer
+    local nearPlayers = nil
     if tileToCheckIsValid then
         --if near both players, returns first found
-        nearPlayer = self:isValidMove(x, y, tileToCheckIsValid)
-        if not nearPlayer then
+        dbg.print("checking isValidMove")
+        nearPlayers = self:isValidMove(x, y, tileToCheckIsValid)
+        if not nearPlayers then
+            dbg.print("move not valid!")
             return -1,-1
         end
     end
     
-    return x, y, nearPlayer
+    return x, y, nearPlayers
 end
 
 function GameBoard:hasTile(x, y)
@@ -145,12 +147,19 @@ function GameBoard:isValidMove(x, y, tile)
 end
 
 function GameBoard:isAdjacentToPlayers(x, y, playerSquareInvalid)
+    local nearPlayers = {}
+    local gotPlayer = false
     for k,player in pairs(players) do
         if self:isAdjacentToPlayer(x, y, player, playerSquareInvalid) then
-            return player
+            table.insert(nearPlayers,player)
+            gotPlayer = true
         end
     end
-    return false
+    if gotPlayer then
+        return nearPlayers
+    else
+        return false
+    end
 end
 
 function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
@@ -159,6 +168,7 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
     end
     
     if player.phase == "waitingForMove" then
+        dbg.print("check adjacent to player " .. player.id ..": ignoring as phase is waitingForMove")
         return false --ignore player while animating
     end
     
@@ -172,12 +182,12 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
 end
 
 function GameBoard:canTakeTile(x, y, player)
-    if isVisited(x,y) then return false end
+    if self:isVisited(x,y) then return false end
     
     if player then
-        return isAdjacentToPlayer(x, y, player, true)
+        return self:isAdjacentToPlayer(x, y, player, true)
     else
-        return isAdjacentToPlayers(x, y, true)
+        return self:isAdjacentToPlayers(x, y, true)
     end
 end
 
@@ -236,10 +246,9 @@ function GameBoard:getReverse(dir)
 end
 
 function GameBoard:fadeOut(onComplete, duration)
+    dbg.print("fadeout board")
     for k,tile in pairs(self.board) do
-        dbg.print("fadeout: " .. k )
-        dbg.print(tile.gridX .. " " .. tile.gridY)
-        dbg.print(tile.tileType)
+        --dbg.print("fadeout: pos=" .. k .. " xy=" .. tile.gridX .. "," .. tile.gridY .. " " .. tile.tileType)
         tween:to(tile.sprite, {alpha=0, time=duration*0.6})
     end
     system:addTimer(onComplete, duration, 1)

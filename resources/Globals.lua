@@ -1,10 +1,10 @@
 -------------------------------------------------------------------
 -- Debugging --
 
-debugOn = false
---debugTileTypes = {"floor"}
+--debugOn = true
+--debugTileTypes = {"extratime"}
 
-require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
+--require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 
 -------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winloose = "loose"
-gameInfo.levelTime = 60
+gameInfo.levelTime = 600
 -- name is hard coded in this example, could be extended to some entry system or game service login
 
 gameInfo.scores = {}

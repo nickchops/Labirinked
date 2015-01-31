@@ -12,6 +12,7 @@ sceneGame.name = "game"
 
 menuHeight = 130
 tileQueueY = menuHeight/3+10
+tilesWide = debugTilesWide or 12
 
 function sceneGame:setUp(event)
     virtualResolution:applyToScene(self)
@@ -39,7 +40,7 @@ function sceneGame:setUp(event)
     tileXSpace = 20
 
     board = GameBoard:create()
-    board:init(1000, 12, 30, menuHeight, debugOn)
+    board:init(900, tilesWide, 30, menuHeight, debugOn)
     
     player1 = Player:create()
     player2 = Player:create()
@@ -54,14 +55,21 @@ function sceneGame:setUp(event)
     fingers[1] = {id=1, phase="ready"}
     fingers[2] = {id=2, phase="ready"}
     
-    player1:setGridPos(0,board.tilesHigh-1, true)
+    local p1StartX = 0
+    local p1StartY = board.tilesHigh-1
+    local p2StartX = board.tilesWide-1
+    local p2StartY = 0
+    
+    player1:setGridPos(p1StartX, p1StartY, true)
     self.startTile1 = board:addNewTileToGrid(player1.x, player1.y, "floor", 1)
+    board:setVisited(p1StartX, p1StartY)
     player1:addPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
-    player2:setGridPos(board.tilesWide-1,0, true)
+    player2:setGridPos(p2StartX, p2StartY, true)
     self.startTile2 = board:addNewTileToGrid(player2.x, player2.y, "floor", 1)
+    board:setVisited(p2StartX, p2StartY)
     player2:addPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
@@ -69,7 +77,23 @@ function sceneGame:setUp(event)
     -- set some tiles to play with to start
 end
 
-function addTileToQueue(event)
+function sceneGame:queueTile(time, number)
+    if not self.tileQueueTimers then
+        self.tileQueueTimers = {}
+        self.tileTimerCount = 0
+    end
+    self.tileTimerCount = self.tileTimerCount + 1
+    
+    local tileTimer = system:addTimer(sceneGame.addTileToQueue, time, number)
+    tileTimer.id = self.tileTimerCount
+    self.tileQueueTimers[tileTimer.id] = tileTimer
+end
+
+function sceneGame.addTileToQueue(event)
+    if event.timer.doneIterations == event.timer.iterations then
+        self.tileQueueTimers[event.timer.id] = nil
+    end
+    
     if tileQueueSize >= tileQueueMax then
         return
     end
@@ -102,7 +126,9 @@ function addTileToQueue(event)
 end
 
 function sceneGame:tileQueueFadeOut(onComplete, duration)
+    dbg.print("fadeout queue")
     for k,tile in pairs(tileQueue) do
+        --dbg.print("fadeout queue: slot=" .. k .. " xy=" .. tile.startX .. "," .. tile.startY .. " " .. tile.tileType)
         tween:to(tile.sprite, {alpha=0, time=duration})
     end
 end
@@ -116,7 +142,6 @@ function sceneGame:enterPostTransition(event)
 end
 
 function sceneGame:exitPreTransition(event)
-    sceneGame:pausePlay()
     saveUserData()
 end
 
@@ -156,7 +181,7 @@ function sceneGame.showPieces()
         tween:from(backButtonHelper.backBtn, {alpha=0, time=0.2})
     end
     
-    system:addTimer(addTileToQueue, 0.3, 4)
+    self:queueTile(0.3, 4)
     
     tween:to(self.startTile1.sprite, {alpha = tileAlpha, time=1.0, delay=0.5, onComplete=sceneGame.startPlay})
     tween:to(self.startTile2.sprite, {alpha = tileAlpha, time=1.0, delay=0.5})
@@ -190,6 +215,7 @@ function sceneGame.levelTimerFunc(event)
     end
     
     if gameInfo.timeLeft <= 0 then
+        dbg.print("time up, pausing play")
         sceneGame:pausePlay()
         board:fadeOut(sceneGame.gotoWinLose, 5)
         sceneGame:tileQueueFadeOut(3)
@@ -199,16 +225,27 @@ function sceneGame.levelTimerFunc(event)
 end
 
 function sceneGame:incrementTimer(time)
+    dbg.print("stop timer")
     self.levelTimer:cancel()
     gameInfo.timeLeft = gameInfo.timeLeft + time
+    dbg.print("restart timer")
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.timeLeft)
 end
 
 function sceneGame:pausePlay()
+    dbg.print("PAUSE PLAY")
     --todo: pause drag events if needed
     system:removeEventListener("touch", self)
     backButtonHelper:disable()
     sceneGame.disableButtons()
+    self.levelTimer:cancel()
+    self.levelTimer = nil
+    if self.tileQueueTimers then
+        for k,timer in pairs(self.tileQueueTimers) do
+            timer:cancel()
+        end
+        self.tileQueueTimers = nil
+    end
 end
 
 function createTile(screenX, screenY, tileType, rotation)
@@ -227,6 +264,7 @@ function sceneGame.gotoWinLose()
 end
 
 function sceneGame:levelCleared()
+    dbg.print("level cleared, pausing play")
     sceneGame:pausePlay()
     gameInfo.winLose = "win"
     board:fadeOut(sceneGame.gotoWinLose, 7)
@@ -236,6 +274,8 @@ end
 -----------------------------------------------------------------
 
 function sceneGame.quit()
+    dbg.print("quit level, pausing play")
+    sceneGame:pausePlay()
     audio:stopStream()
     system:removeEventListener({"suspend", "resume", "update", "touch"}, sceneGame)
     pauseNodesInTree(sceneGame)
@@ -274,17 +314,21 @@ function sceneGame:touch(event)
             local yGrid
             xGrid, yGrid = board:getNearestGridPos(x,y)
             if board:hasTile(xGrid, yGrid) then
+                dbg.print("HAS TILE")
                 local gotTile --tile can be valid for both players (but doesnt mean we've won!)
                 for k,player in pairs(players) do
+                    dbg.print("Has tile: check player(" .. player.id .. ") phase=" .. player.phase)
                     if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
+                        dbg.print("CAN TAKE TILE")
                         player.phase = "changingTilePos" --TODO: not using this yet. will check animating/moving
+                        dbg.print("moving tile, player(" .. player.id .. ") setting phase=" .. player.phase)
                         finger.phase = "placingTile"
                         if not gotTile then
                             gotTile = board:getAndRemoveTile(xGrid, yGrid)
                         end
                         finger.dragTile = gotTile
-                        if not finger.dragTile.player then finger.dragTile.player={} end
-                        table.insert(finger.dragTile.player, player)
+                        if not finger.dragTile.players then finger.dragTile.players={} end
+                        finger.dragTile.players[player.id] = player
                     end
                 end
             end
@@ -296,20 +340,27 @@ function sceneGame:touch(event)
             if finger.dragTile.finger then
                 print("TOUCH END tile has finger: " .. finger.dragTile.finger.id)
             else
-                print("TOUCH END tile has no finger - should be releasing a grid tile")
+                print("TOUCH END tile has no finger - should be releasing a grid tile") --TODO check this!!
             end
-            local addedtoBoard
-            local takenFromQueue
-            addedToBoard, takenFromQueue = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile))
-            if addedToBoard then
+            
+            local tilePlacedNearPlayers, tileWasFromQueue
+                    = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile))
+            -- tilePlacedNearPlayers = false: tile not placed so return it.
+            -- tilePlacedNearPlayers = list: tile was moved and this is a list of players the tile is now next to
+            
+            if tilePlacedNearPlayers then
                 --TODO: check for movement and update movement and player phase
                 -- might want to set finger.phase = "wait" while above animates!
-                local updatedPlayer = addedToBoard
-                updatedPlayer.phase = "waitingForMove"
+                for k,player in pairs(tilePlacedNearPlayers) do
+                    player.phase = "waitingForMove"
+                    dbg.print("added tile to board: near player(" .. player.id ..") setting player phase=" .. player.phase)
+                end
             else
-                if finger.dragTile.player then
-                    for k,player in pairs(finger.dragTile.player) do
+                if finger.dragTile.players then
+                    for k,player in pairs(finger.dragTile.players) do
                         player.phase = "ready"
+                        finger.dragTile.players[player.id] = nil
+                        dbg.print("NOT added to board (from queue): player(" .. player.id ..") setting phase=" .. player.phase)
                     end
                 end
             end
@@ -319,11 +370,11 @@ function sceneGame:touch(event)
             finger.dragTile.finger = nil
             finger.dragTile = nil
             
-            if takenFromQueue then --if added a tile from the queue -> new tile
+            if tileWasFromQueue then --if added a tile from the queue (not dragged from other spot on board) -> new tile
                 print("TOUCH END queuing new tile")
                 tileQueueSize = tileQueueSize -1
-                tileQueue[takenFromQueue] = nil
-                system:addTimer(addTileToQueue, 0.5, 1)
+                tileQueue[tileWasFromQueue] = nil
+                self:queueTile(0.5, 1)
             end
             
         end

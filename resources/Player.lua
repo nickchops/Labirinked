@@ -44,6 +44,12 @@ function Player:addPossibleMoves(moves)
 end
 
 function Player:tryToMove()
+    dbg.print("tryToMove for " .. self.id)
+    if self.otherPlayer.phase == "levelComplete" then
+        dbg.print("other player has finished!")
+        return false --note: return value just used for debugging
+    end
+    
     -- possibleMoves is directions can move on current tile
     -- doesn't include direction player came from
     local moves = self.possibleMoves[self.moveStackSize]
@@ -64,9 +70,18 @@ function Player:tryToMove()
     moveCount, moveList = board:getAvailableMoves(self.x, self.y, moves, self.otherPlayer)
     
     if moveCount == -1 then
+        if self.otherPlayer.x == moveList.gridX and self.otherPlayer.y == moveList.gridY
+                    and self.otherPlayer.phase=="waitingForMove" then
+            dbg.print("other player is already moving into the target - dont move")
+            self.phase = "ready"
+            return false --note: return value just used for debugging
+        end
+        
         dbg.print("LEVEL COMPLETE! animating out...")
         -- stop play, move players towards eachother, sceneGame will take care of ending the level
         sceneGame:levelCleared()
+        self.phase="levelComplete"
+        self.otherPlayer.phase="levelComplete"
         
         local targetX
         local targetY
@@ -93,9 +108,10 @@ function Player:tryToMove()
         tween:to(self.sprite, {x = targetX, y = targetY, time=1, onComplete = Player.bounce, delay=0.2})
         tween:to(self.otherPlayer.sprite, {x = otherTargetX, y = otherTargetY, time=1, onComplete = Player.bounce})
         
-        return true
+        return false
     elseif moveCount == 0 then
         dbg.print("NO MOVES FOUND!")
+        dbg.print("player set to ready in tryToMove: " .. self.id)
         self.phase = "ready"
         dbg.print("------------------------------------------")
         return false
@@ -186,9 +202,9 @@ function Player.drawCross2(target)
 end
 
 function Player.reactivatePlayer(target)
-    -- try to move recursively; return control once fails
+    -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
     if not target.player:tryToMove() then
-        target.player.phase = "ready"
+        dbg.print("tryToMove failed in reactivatePlayer(" .. target.player.id .. ") should have already set phase to ready...")
     end
 end
 

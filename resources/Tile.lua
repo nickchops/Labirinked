@@ -1,7 +1,7 @@
 
 Tile = inheritsFrom(baseClass)
 
-tileTypes = { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
+tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
 --tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime"}
 
 tileTypeCount = 0
@@ -54,7 +54,7 @@ function Tile:process(player)
     
         self.sprite:removeFromParent()
         self.tileType = "floor"
-        self.sprite = self:createSprite(self.x, self.y) --position back where it already was
+        self:createSprite(self.x, self.y) --position back where it already was
     end
 end
 
@@ -117,18 +117,27 @@ function tilePlaced(target)
     if not tile.startSlot then
         board:addTile(tile.gridX, tile.gridY, tile)
     
-        if target.player then
-            target.player:tryToMove()
+        if tile.gridX==1 and tile.gridY==0 then
+            dbg.print("------------------------")
+            dbg.print("TILE LAID FOR FINAL MOVE")
+        end
+            
+        if target.players then
+            for k,player in pairs(target.players) do
+                dbg.print("CALLING TRY MOVE FOR: " .. player.id)
+                player:tryToMove() -- if other player's move already completed the level, this just returns
+            end
         end
     end
     target.tile = nil
-    target.player = nil
+    target.players = nil
 end
 
 -- return true = placed in new place on grid
-function Tile:setGridTarget(gridX, gridY, nearPlayer)
+function Tile:setGridTarget(gridX, gridY, nearPlayers)
     self.sprite.tile = self
-    self.sprite.player = nearPlayer
+    self.sprite.players = nearPlayers
+    dbg.print("setGridTarget: x,y=" .. gridX .. "," .. gridY)
     if gridX < 0 or gridY < 0 then
         if self.startSlot then
             --back to slot
@@ -144,6 +153,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayer)
         end
         return false, false
     else
+        dbg.print("target is on grid")
         --to new grid position
         self.gridX = gridX
         self.gridY = gridY
@@ -151,11 +161,12 @@ function Tile:setGridTarget(gridX, gridY, nearPlayer)
         tween:to(self.sprite, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         
         if self.startSlot then
+            dbg.print("got a start slot")
             local oldSlot = self.startSlot
             self.startSlot = nil
-            return nearPlayer or true, oldSlot
+            return nearPlayers or true, oldSlot
         else
-            return nearPlayer or true, false
+            return nearPlayers or true, false
         end
     end
 end
