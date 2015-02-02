@@ -149,8 +149,12 @@ function sceneMainMenu:exitPostTransition(event)
     dbg.print("sceneMainMenu:exitPostTransition done")
 end
 
-sceneMainMenu:addEventListener({"setUp", "enterPostTransition", "exitPreTransition", "exitPostTransition"}, sceneMainMenu)
+function sceneMainMenu:orientation(event)
+    updateVirtualResolution(self)
+end
 
+sceneMainMenu:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
+        "exitPostTransition", "orientation"}, sceneMainMenu)
 
 ---- Button helpers -----------------------------------------------------------
 

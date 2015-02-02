@@ -87,5 +87,10 @@ function sceneCredits:update(event)
     end
 end
 
+function sceneCredits:orientation(event)
+    updateVirtualResolution(self)
+end
 
-sceneCredits:addEventListener({"setUp", "enterPostTransition", "exitPreTransition", "exitPostTransition"}, sceneCredits)
+
+sceneCredits:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
+        "exitPostTransition", "orientation"}, sceneCredits)

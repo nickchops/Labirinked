@@ -167,6 +167,17 @@ function backButtonHelper:add(listenerOrParamTable, xCentre, yCentre, btnWidth, 
     end
 end
 
+function backButtonHelper:setCenterPosition(x,y)
+    if self.backBtn then
+        if x then
+            self.backbtn.x=x
+        end
+        if y then
+            self.backbtn.y=y
+        end
+    end
+end
+
 function backButtonHelper:disable()
     self.enabled = false
     self.inUse = false

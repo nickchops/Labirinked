@@ -162,5 +162,9 @@ function sceneWinLose:update(event)
     end
 end
 
+function sceneWinLose:orientation(event)
+    updateVirtualResolution(self)
+end
 
-sceneWinLose:addEventListener({"setUp", "enterPostTransition", "exitPreTransition", "exitPostTransition"}, sceneWinLose)
+sceneWinLose:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
+        "exitPostTransition", "orientation"}, sceneWinLose)

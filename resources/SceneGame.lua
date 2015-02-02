@@ -11,7 +11,7 @@ sceneGame = director:createScene()
 sceneGame.name = "game"
 
 menuHeight = 130
-tileQueueY = menuHeight/3+10
+tileQueueY = (menuHeight/3+10) + screenMinY/2
 tilesWide = debugTilesWide or 12
 
 function sceneGame:setUp(event)
@@ -164,7 +164,22 @@ function sceneGame:exitPostTransition(event)
     director:cleanupTextures()
 end
 
-sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition", "exitPostTransition"}, sceneGame)
+function sceneGame:orientation(event)
+    updateVirtualResolution(self)
+    
+    tileQueueY = (menuHeight/3+10) - screenMinY/2
+    
+    for k,tile in pairs(tileQueueMax) do
+        tile.startY = tileQueueY
+        tile.sprite.y = tileQueueY
+    end
+    
+    backButtonHelper:setCenterPosition(nil, 55+screenMinY/2)
+end
+
+
+sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
+        "exitPostTransition", "orientation"}, sceneGame)
 
 -------------------------------------------------------------
 
@@ -173,7 +188,7 @@ sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
 
 function sceneGame.showPieces()
     local self = sceneGame
-    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55, btnWidth=80,
+    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55+screenMinY/2, btnWidth=80,
             btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
             deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
     

@@ -11,8 +11,8 @@ KeyAbsBSK=Esc
 
 IOSDispScaleFactor=200
 
-WinWidth=1024
-WinHeight=768
+#WinWidth=1024
+#WinHeight=768
 
 {OS=WINDOWS}
 #Windowing options for desktop builds
