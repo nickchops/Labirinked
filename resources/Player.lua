@@ -138,7 +138,7 @@ function Player:tryToMove()
     table.insert(self.returnMoves, board:getReverse(dir))
     
     --figure out *next* possible move once on the tile
-    local tileSides = tilePaths[tile.tileType][tile.rotation]
+    local tileSides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]]
     local newMoves = {}
     
     dbg.print("Exits on new square:")

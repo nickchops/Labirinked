@@ -214,7 +214,7 @@ function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
                 return -1, tile
             elseif not self:isVisited(tile.gridX, tile.gridY) then
                 --get list of sides this tile has exits on
-                local entrySides = tilePaths[tile.tileType][tile.rotation] --eg {"down", "up"}
+                local entrySides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]] --eg {"down", "up"}
                 local success = false
                 
                 --matching entry/exit sides means move is valid

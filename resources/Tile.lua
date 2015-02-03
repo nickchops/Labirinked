@@ -14,6 +14,9 @@ end
 -- Doesn't indicate the direction of actual travel
 tileRotations = { floor={1}, corner={1,2,3,4}, road={1,2}, bridge={1},
         threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1,3} }
+    
+-- NB: self.rotation indicates which of the above is used, not actual rotation.
+-- Actual rotation of the tile is: tileRotations[tile.tileType][tile.rotation]
 
 --Directions a tile of each type lets you move off of it.
 --corner: "up" is curve from bottom to right!
@@ -28,7 +31,7 @@ tilePaths = { floor={{"up","left","down","right"}},
               bridge={{"left","right"}},
               extratime={{"up","left","down","right"}},
               blocker={{}},
-              stairAscend={{"left","right"}, nil,{"left","right"}} --needs to track height too...
+              stairAscend={{"left","right"}, nil, {"left","right"}} --needs to track height too...
           }
 
 tileAlpha = 0.9
@@ -66,6 +69,7 @@ function Tile:createSprite(startAlpha,x,y)
     y = y or -self.posOffset
     
     local suffix
+    --TODO: this logic is bad, but not being used yet/anymore anyway...
     if self.tileType == "bridge" then
         if self.rotation == 1 then
             suffix = "-horiz"
@@ -128,7 +132,7 @@ end
 
 function Tile:setRotation()
     if self.tileType == "stairAscend" then
-        self.origin.xFlip = self.rotation == 3
+        self.sprite.xFlip = self.rotation == 2
         return
     end
     
