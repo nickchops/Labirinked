@@ -13,7 +13,7 @@ end
 -- 0 = the image's rotation in file
 -- Doesn't indicate the direction of actual travel
 tileRotations = { floor={1}, corner={1,2,3,4}, road={1,2}, bridge={1},
-        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1} }
+        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1,3} }
 
 --Directions a tile of each type lets you move off of it.
 --corner: "up" is curve from bottom to right!
@@ -28,7 +28,7 @@ tilePaths = { floor={{"up","left","down","right"}},
               bridge={{"left","right"}},
               extratime={{"up","left","down","right"}},
               blocker={{}},
-              stairAscend={{"left","right"}}
+              stairAscend={{"left","right"}, nil,{"left","right"}} --needs to track height too...
           }
 
 tileAlpha = 0.9
@@ -44,8 +44,10 @@ function Tile:init(x, y, tileType, rotation, tileWidth)
     self.y = y
     self.posOffset = tileWidth/2
     
-    self:createSprite(self.x - self.posOffset, self.y - self.posOffset, 0)
-    --centre pos on when creating and fade in, e.g. in queue
+    self.origin = director:createNode({x=self.x, y=self.y})
+    self:createSprite(0)
+    
+    --use centre pos when creating and fade in, e.g. in queue
 end
 
 function Tile:process(player)
@@ -54,12 +56,15 @@ function Tile:process(player)
     
         self.sprite:removeFromParent()
         self.tileType = "floor"
-        self:createSprite(self.x, self.y) --position back where it already was
+        self:createSprite() --position back where it already was
     end
 end
 
-function Tile:createSprite(x,y,startAlpha)
+function Tile:createSprite(startAlpha,x,y)
     startAlpha = startAlpha or tileAlpha
+    x = x or -self.posOffset
+    y = y or -self.posOffset
+    
     local suffix
     if self.tileType == "bridge" then
         if self.rotation == 1 then
@@ -85,6 +90,8 @@ function Tile:createSprite(x,y,startAlpha)
     setDefaultSize(self.sprite, self.posOffset*2)
     self.sprite.alpha=startAlpha
     
+    self.origin:addChild(self.sprite)
+    
     if self.gridY then
         board:setDepth(self)
     end
@@ -95,21 +102,47 @@ function Tile:canRotate()
 end
 
 function Tile:rotateRight()
+    if not self:canRotate() then return end
     
+    self.rotation = self.rotation + 1
+    if not tileRotations[self.tileType][self.rotation] then
+        self.rotation = 1
+    end
+    
+    self:setRotation()
 end
 
 function Tile:rotateLeft()
+    if not self:canRotate() then return end
     
+    self.rotation = self.rotation - 1
+    if not tileRotations[self.tileType][self.rotation] then
+        for k,v in ipairs(tileRotations[self.tileType]) do
+            self.rotation = v
+        end
+    end
+    
+    self:setRotation()
+end
+
+
+function Tile:setRotation()
+    if self.tileType == "stairAscend" then
+        self.origin.xFlip = self.rotation == 3
+        return
+    end
+    
+    self.origin.rotation = (self.rotation - 1) * 90
 end
 
 function Tile:setPos(x,y)
-    self.sprite.x = x
-    self.sprite.y = y
+    self.origin.x = x+self.posOffset
+    self.origin.y = y+self.posOffset
 end
 
 function Tile:setPosCentered(x,y)
-    self.sprite.x = x - self.posOffset
-    self.sprite.y = y - self.posOffset
+    self.origin.x = x
+    self.origin.y = y
 end
 
 function tilePlaced(target)
@@ -135,21 +168,21 @@ end
 
 -- return true = placed in new place on grid
 function Tile:setGridTarget(gridX, gridY, nearPlayers)
-    self.sprite.tile = self
-    self.sprite.players = nearPlayers
+    self.origin.tile = self
+    self.origin.players = nearPlayers
     dbg.print("setGridTarget: x,y=" .. gridX .. "," .. gridY)
     if gridX < 0 or gridY < 0 then
         if self.startSlot then
             --back to slot
-            tween:to(self.sprite, {x=self.startX-self.posOffset, y=self.startY-self.posOffset, time=0.2, onComplete=tilePlaced})
+            tween:to(self.origin, {x=self.startX, y=self.startY, time=0.2, onComplete=tilePlaced})
         else
             --back to where it came from on grid
             
             --TODO: allow to go back to queue if came from board by finding next empty slot
             -- for now, jsut always return to where it came from
             -- prob do this by leaving this as-is and setting the startSlot val elsewhere...
-            self.x, self.Y = board:getScreenPos(self.gridX, self.gridY)
-            tween:to(self.sprite, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
+            self.x, self.Y = board:getScreenPosCentre(self.gridX, self.gridY)
+            tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         end
         return false, false
     else
@@ -157,8 +190,8 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
         --to new grid position
         self.gridX = gridX
         self.gridY = gridY
-        self.x, self.y = board:getScreenPos(gridX,gridY)
-        tween:to(self.sprite, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
+        self.x, self.y = board:getScreenPosCentre(gridX,gridY)
+        tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         
         if self.startSlot then
             dbg.print("got a start slot")

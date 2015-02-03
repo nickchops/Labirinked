@@ -109,9 +109,9 @@ function sceneGame.addTileToQueue(event)
     end
     
     if slot % 2 == 1 then
-        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2 - 40
+        tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(slot+1)/2 + board.tileWidth/2 - 50
     else
-        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 40
+        tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 50
     end
     
     local newType = tileTypes[math.random(1, tileTypeCount)]
@@ -167,14 +167,14 @@ end
 function sceneGame:orientation(event)
     updateVirtualResolution(self)
     
-    tileQueueY = (menuHeight/3+10) - screenMinY/2
+    tileQueueY = (menuHeight/3+10) + screenMinY/2
     
     for k,tile in pairs(tileQueueMax) do
         tile.startY = tileQueueY
-        tile.sprite.y = tileQueueY
+        tile.origin.y = tileQueueY
     end
     
-    backButtonHelper:setCenterPosition(nil, 55+screenMinY/2)
+    backButtonHelper:setCenterPosition(nil, 55+screenMinY)
 end
 
 
@@ -188,7 +188,7 @@ sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
 
 function sceneGame.showPieces()
     local self = sceneGame
-    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55+screenMinY/2, btnWidth=80,
+    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55+screenMinY, btnWidth=80,
             btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
             deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
     
@@ -240,10 +240,16 @@ function sceneGame.levelTimerFunc(event)
 end
 
 function sceneGame:incrementTimer(time)
-    dbg.print("stop timer")
     self.levelTimer:cancel()
-    gameInfo.timeLeft = gameInfo.timeLeft + time
-    dbg.print("restart timer")
+    
+    time = gameInfo.timeLeft + time
+    if time > 9 and gameInfo.timeLeft < 10 then
+        event.target.label.x = event.target.label.x*2
+    end
+    
+    gameInfo.timeLeft = time
+    self.levelTimerNode.xScale = 2
+    self.levelTimerNode.yScale = 2
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.timeLeft)
 end
 
@@ -266,7 +272,7 @@ end
 function createTile(screenX, screenY, tileType, rotation)
     local tile = Tile:create()
     tile:init(screenX, screenY, tileType, rotation, board.tileWidth)
-    tile.sprite.zOrder=board.tilesHigh+1
+    tile.origin.zOrder=board.tilesHigh+2
     return tile
 end
 
@@ -316,6 +322,8 @@ function sceneGame:touch(event)
                     finger.phase = "placingTile"
                     finger.dragTile = tile
                     finger.dragTile.finger = finger
+                    finger.startX = x
+                    finger.startY = y
                     print("TOUCH START SUCCESS")
                     break
                 elseif tile.finger then
@@ -340,8 +348,10 @@ function sceneGame:touch(event)
                         finger.phase = "placingTile"
                         if not gotTile then
                             gotTile = board:getAndRemoveTile(xGrid, yGrid)
+                            finger.dragTile = gotTile
+                            finger.startX = x
+                            finger.startY = y
                         end
-                        finger.dragTile = gotTile
                         if not finger.dragTile.players then finger.dragTile.players={} end
                         finger.dragTile.players[player.id] = player
                     end
@@ -356,6 +366,11 @@ function sceneGame:touch(event)
                 print("TOUCH END tile has finger: " .. finger.dragTile.finger.id)
             else
                 print("TOUCH END tile has no finger - should be releasing a grid tile") --TODO check this!!
+            end
+            
+            -- for laziness, using tap to rotate. may want to change to two finger rotate...
+            if math.abs(finger.startX - x) < tapThreshold and math.abs(finger.startY - y) < tapThreshold then
+                finger.dragTile:rotateRight()
             end
             
             local tilePlacedNearPlayers, tileWasFromQueue

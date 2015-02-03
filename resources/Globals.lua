@@ -37,20 +37,18 @@ titleCol = lineColor
 btnCol = color.aliceBlue
 btnTexture = "textures/button1.png"
 btnBackTexture = "textures/button2.png"
-btnTextureShort = "textures/shortGoldButton.png"
 titleMusic = "sounds/labirink.mp3"
 gameMusic = nil
--- free music is from www.playonloop.com A handy website!
--- You should include attribution in the game if not paying!
-
 gameInfo = {}
 gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winloose = "loose"
-gameInfo.levelTime = 600
--- name is hard coded in this example, could be extended to some entry system or game service login
+gameInfo.levelTime = 60
 
+tapThreshold = 5 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
+
+-- name is hard coded, could be extended to some entry system or game service login
 gameInfo.scores = {}
 local names = {"MAR", "MAL", "ADE", "PAC", "JNR", "CRS", "I3D", "MRK", "DAN", "FFS"}
 for n=1, 10 do

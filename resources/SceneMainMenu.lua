@@ -90,8 +90,11 @@ function sceneMainMenu:setUp(event)
 
     sceneMainMenu:addButton("sound", "text", "Sound: on", -300, -380, 140, sceneMainMenu.touchSound, 70)
     
-    if not gameInfo.soundOn then
-        self.btns.sound.alpha = 0.5
+    if gameInfo.soundOn then
+        self.btns.sound.alpha = 0.65
+    else
+        self.btns.sound.alpha = 0.3
+        self.btns.sound.label.alpha = 0.5
         self.btns.sound.label.text = "Sound: off"
     end
 

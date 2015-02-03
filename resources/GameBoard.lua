@@ -76,7 +76,7 @@ function GameBoard:addNewTileToGrid(gridX, gridY, tileType, rotation)
 end
 
 function GameBoard:setDepth(tile)
-    tile.sprite.zOrder = self.tilesHigh - tile.gridY
+    tile.origin.zOrder = self.tilesHigh - tile.gridY
 end
 
 function GameBoard:getPlayerDepth(x,y)
