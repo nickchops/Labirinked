@@ -51,6 +51,7 @@ function sceneGame:setUp(event)
     players[1] = player1
     players[2] = player2
     
+    --TODO: could allow as many fingers as wanted!
     fingers = {}
     fingers[1] = {id=1, phase="ready"}
     fingers[2] = {id=2, phase="ready"}
@@ -60,16 +61,14 @@ function sceneGame:setUp(event)
     local p2StartX = board.tilesWide-1
     local p2StartY = 0
     
-    player1:setGridPos(p1StartX, p1StartY, true)
-    self.startTile1 = board:addNewTileToGrid(player1.x, player1.y, "floor", 1)
-    board:setVisited(p1StartX, p1StartY)
+    self.startTile1 = board:addNewTileToGrid(p1StartX, p1StartY, "floor", 1)
+    player1:setGridPos(p1StartX, p1StartY, true, true)
     player1:addPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
-    player2:setGridPos(p2StartX, p2StartY, true)
-    self.startTile2 = board:addNewTileToGrid(player2.x, player2.y, "floor", 1)
-    board:setVisited(p2StartX, p2StartY)
+    self.startTile2 = board:addNewTileToGrid(p2StartX, p2StartY, "floor", 1)
+    player2:setGridPos(p2StartX, p2StartY, true, true)
     player2:addPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
@@ -220,6 +219,8 @@ function sceneGame.startPlay()
 end
 
 function sceneGame.levelTimerFunc(event)
+    cancelTweensOnNode(sceneGame.levelTimerNode)
+    
     gameInfo.timeLeft = gameInfo.timeLeft - 1
     event.target.label.text = gameInfo.timeLeft
     event.target.xScale = 1.5
@@ -241,16 +242,20 @@ end
 
 function sceneGame:incrementTimer(time)
     self.levelTimer:cancel()
+    cancelTweensOnNode(self.levelTimerNode)
     
     time = gameInfo.timeLeft + time
+    self.levelTimerNode.label.text = time
+    
     if time > 9 and gameInfo.timeLeft < 10 then
-        event.target.label.x = event.target.label.x*2
+        self.levelTimerNode.label.x = self.levelTimerNode.label.x*2
     end
     
     gameInfo.timeLeft = time
     self.levelTimerNode.xScale = 2
     self.levelTimerNode.yScale = 2
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.timeLeft)
+    tween:to(self.levelTimerNode, {xScale=1, yScale=1, time=0.9})
 end
 
 function sceneGame:pausePlay()
@@ -307,7 +312,13 @@ end
 -----------------------------------------------------------------
 
 function sceneGame:touch(event)
-    if event.id > 1 then return end
+    --if event.id > 1 then return end --lock to single touch for testing
+    if event.id > 2 then return end
+    
+    --TODO: issue with multitouch: can place a tile while another tile is dragged off the
+    --target position. Will then end up with two tiles if original tile
+    --is released and goes back to old place
+    --Should lock the position while a tile is being dragged from it
     
     local x = vr:getUserX(event.x)
     local y = vr:getUserY(event.y)
@@ -347,7 +358,8 @@ function sceneGame:touch(event)
                         dbg.print("moving tile, player(" .. player.id .. ") setting phase=" .. player.phase)
                         finger.phase = "placingTile"
                         if not gotTile then
-                            gotTile = board:getAndRemoveTile(xGrid, yGrid)
+                            gotTile = board:getAndRemoveTile(xGrid, yGrid, true)
+                            finger.reservedTile = {x=xGrid,y=yGrid}
                             finger.dragTile = gotTile
                             finger.startX = x
                             finger.startY = y
@@ -368,19 +380,19 @@ function sceneGame:touch(event)
                 print("TOUCH END tile has no finger - should be releasing a grid tile") --TODO check this!!
             end
             
-            -- for laziness, using tap to rotate. may want to change to two finger rotate...
+            -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
+            local rotated = false
             if math.abs(finger.startX - x) < tapThreshold and math.abs(finger.startY - y) < tapThreshold then
-                finger.dragTile:rotateRight()
+                rotated = finger.dragTile:rotateRight()
+                -- we still carry on after this so that player can try to move, tile repositions, flags reset
             end
             
             local tilePlacedNearPlayers, tileWasFromQueue
-                    = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile))
+                    = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile, rotated))
             -- tilePlacedNearPlayers = false: tile not placed so return it.
             -- tilePlacedNearPlayers = list: tile was moved and this is a list of players the tile is now next to
             
             if tilePlacedNearPlayers then
-                --TODO: check for movement and update movement and player phase
-                -- might want to set finger.phase = "wait" while above animates!
                 for k,player in pairs(tilePlacedNearPlayers) do
                     player.phase = "waitingForMove"
                     dbg.print("added tile to board: near player(" .. player.id ..") setting player phase=" .. player.phase)
@@ -393,6 +405,11 @@ function sceneGame:touch(event)
                         dbg.print("NOT added to board (from queue): player(" .. player.id ..") setting phase=" .. player.phase)
                     end
                 end
+            end
+            
+            if finger.reservedTile then
+                board:freeUpTile(finger.reservedTile)
+                finger.reservedTile = nil
             end
             
             print("TOUCH END resetting finger " .. finger.id)

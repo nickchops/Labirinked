@@ -1,7 +1,7 @@
 
 Tile = inheritsFrom(baseClass)
 
-tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend" }
+tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
 --tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime"}
 
 tileTypeCount = 0
@@ -13,7 +13,9 @@ end
 -- 0 = the image's rotation in file
 -- Doesn't indicate the direction of actual travel
 tileRotations = { floor={1}, corner={1,2,3,4}, road={1,2}, bridge={1},
-        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1,3} }
+        threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1,3},
+        floorRaised = {1}, roadRaised = {1}, roadRaisedGateway = {1}, roadRaisedOverpass = {1}
+        }
     
 -- NB: self.rotation indicates which of the above is used, not actual rotation.
 -- Actual rotation of the tile is: tileRotations[tile.tileType][tile.rotation]
@@ -31,8 +33,48 @@ tilePaths = { floor={{"up","left","down","right"}},
               bridge={{"left","right"}},
               extratime={{"up","left","down","right"}},
               blocker={{}},
-              stairAscend={{"left","right"}, nil, {"left","right"}} --needs to track height too...
-          }
+              stairAscend={{"left","right"}, nil, {"left","right"}},
+              floorRaised={{"up","left","down","right"}},
+              roadRaised={{"left","right"}},
+              roadRaisedGateway={{"left","right"}},
+              roadRaisedOverpass={{"left","right"}}
+        }
+
+--currently using 1->4 to represent up->right->down->left.
+--we should change the tables to use 'up={"up", "left"}' etc instead of being array
+--we should also prob use different terminology for rotation, direction and sides
+--e.g. "side-top", "side-right"... "side-top", "side-right"...  "rot-0", "rot-90"...
+--tileHeights would then have {left=1, right=0} etc. No need for any of the nils anywhere
+
+--this converts tileRotations and tileHeights indexes to directions
+dirToIndex = {up=1,right=2,down=3,left=4}
+
+--1st value is height at centre (stationary player height)
+--2nd index exists -> we are on a ramp.
+-- Values of 2nd index are height at each edge (up,right,down,left) per orientation
+--0==floor height, 1 = walkway height (1 extra tile height high).
+--3rd value is extra to adjust player y pos by (so that visual height
+-- doesnt interfere with logic)
+tileHeights = { floor={0},
+              corner={0},
+              road={0},
+              threeway={0},
+              bridge={0,nil,0.2},
+              extratime={0},
+              blocker={0},
+              stairAscend={0.5, {{nil,1,nil,0}, nil, {nil,0,nil,1}}},
+              floorRaised={1},
+              roadRaised={1},
+              roadRaisedGateway={1}, --TODO these two need to support two layers!
+              roadRaisedOverpass={1}
+        }
+
+ --TODO prob make gateway, overpass and bridge work as-is
+ -- and instead update GameBoard to allow two tiles in same space
+ -- with floor, river, etc either drawn underneath or ivisible
+ -- Then just do "if tile is table then try both tiles"
+ --Plus add logic to put bridges on rivers. Maybe allow bridges
+ -- on top of roads? Or force user to swap them out?
 
 tileAlpha = 0.9
 
@@ -101,12 +143,42 @@ function Tile:createSprite(startAlpha,x,y)
     end
 end
 
+function Tile:getHeight(visualAdjust, dir)
+    local heightMap = tileHeights[self.tileType]
+    local height
+    if dir and heightMap[2] then
+        local tH = heightMap[2] -- table of {1,0} pairs
+        local tDir = tileRotations[self.tileType][self.rotation] -- 1 or 3
+        local heightPair = tH[tDir]
+        if heightPair then
+            dbg.print("heightPair:")
+            dbg.printTable(heightPair)
+        else
+            dbg.print("NO heightPair!")
+        end
+        dbg.print("DIR: " .. dirToIndex[dir])
+        
+        height = heightPair[dirToIndex[dir]]
+        --height = [][dir]
+        --height = tileHeights[self.tileType][2][tileRotations[self.TileType][self.rotation]][dir]
+        dbg.assert(height, "Error getting tile height! - " .. self.x .. "," .. self.y .. " " .. dir)
+    else
+        height = heightMap[1]
+        dbg.print("single height: " .. height)
+    end
+    
+    if visualAdjust and heightMap[3] then
+        height = height + heightMap[3]
+    end
+    return height
+end
+
 function Tile:canRotate()
     return tileRotations[self.tileType][2]--array larger than 1
 end
 
 function Tile:rotateRight()
-    if not self:canRotate() then return end
+    if not self:canRotate() then return false end
     
     self.rotation = self.rotation + 1
     if not tileRotations[self.tileType][self.rotation] then
@@ -114,10 +186,11 @@ function Tile:rotateRight()
     end
     
     self:setRotation()
+    return true
 end
 
 function Tile:rotateLeft()
-    if not self:canRotate() then return end
+    if not self:canRotate() then return false end
     
     self.rotation = self.rotation - 1
     if not tileRotations[self.tileType][self.rotation] then
@@ -127,6 +200,7 @@ function Tile:rotateLeft()
     end
     
     self:setRotation()
+    return true
 end
 
 

@@ -13,16 +13,19 @@ GameBoard = inheritsFrom(baseClass)
 --board will be centered on the screen in the area left after that
 --tiles high is however many can live in the space left!
 
+--todo: prob should have fixed sizes/levels :p
+
 -- grid positions start at 0,0
 function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debugDraw)
     self.board = {}
     self.boardVisited = {}
+    self.boardReserved = {}
     self.widthOnScreen = widthOnScreen
     self.startWidth = widthOnScreen
     self.tileWidth = widthOnScreen/tilesWide
     self.halfTile = self.tileWidth/2
     self.tilesWide = tilesWide
-    self.tilesHigh = math.floor((appHeight-menuHeight)/self.tileWidth)
+    self.tilesHigh = math.floor((appHeight-menuHeight)/self.tileWidth) -1 --allow some padding
     self.heightOnScreen = self.tilesHigh * self.tileWidth
     self.maxTilesWide = maxTilesWide
     self.startHeight = self.tileWidth * self.tilesHigh
@@ -83,9 +86,17 @@ function GameBoard:getPlayerDepth(x,y)
     return self.tilesHigh - y + 2 --allow 1 pos between player and tile
 end
 -- input: grid pos starting at zero. output: screen position
-function GameBoard:getScreenPosCentre(x,y)
-    return self.origin.x + self.tileWidth*x + self.halfTile,
-            self.origin.y + self.tileWidth*y + self.halfTile
+function GameBoard:getScreenPosCentre(x,y,matchTileHeight)
+    local retX = self.origin.x + self.tileWidth*x + self.halfTile
+    local retY = self.origin.y + self.tileWidth*y + self.halfTile
+    
+    if matchTileHeight then
+        local tile = self:getTile(x,y)
+        local height = tile:getHeight(true)
+        retY = retY + height*self.halfTile*2
+    end
+    
+    return retX, retY
 end
 
 function GameBoard:getScreenPos(x,y)
@@ -93,7 +104,7 @@ function GameBoard:getScreenPos(x,y)
            self.origin.y + self.tileWidth*y
 end
 
-function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
+function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid, returningTileIsValid)
     x = math.floor((x-self.origin.x)/self.tileWidth)
     y = math.floor((y-self.origin.y)/self.tileWidth)
     
@@ -108,8 +119,13 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
     local nearPlayers = nil
     if tileToCheckIsValid then
         --if near both players, returns first found
-        dbg.print("checking isValidMove")
-        nearPlayers = self:isValidMove(x, y, tileToCheckIsValid)
+        if tileToCheckIsValid.gridX then
+            dbg.print("checking isValidMove for tile: x.y=" .. tileToCheckIsValid.gridX .. "," .. tileToCheckIsValid.gridY)
+            if returningTileIsValid then
+                dbg.print("returningTileIsValid")
+            end
+        end
+        nearPlayers = self:isValidMove(x, y, tileToCheckIsValid, returningTileIsValid)
         if not nearPlayers then
             dbg.print("move not valid!")
             return -1,-1
@@ -119,28 +135,57 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid)
     return x, y, nearPlayers
 end
 
-function GameBoard:hasTile(x, y)
-    if self.board[y*self.maxTilesWide+x] then
+function GameBoard:hasTile(x, y, includeReservedCells)
+    local index = self:getTileIndex(x,y)
+    if self:getTileAtIndex(index) then
         return true
     else
-        return false
+        if includeReservedCells and self.boardReserved[index] then
+            return true
+        else
+            return false
+        end
     end
 end
 
+function GameBoard:getTile(x,y)
+    return self.board[y*self.maxTilesWide+x]
+end
 
-function GameBoard:getAndRemoveTile(x, y)
-    local tile = self.board[y*self.maxTilesWide+x]
-    self.board[y*self.maxTilesWide+x] = nil
+function GameBoard:getTileIndex(x,y)
+    return y*self.maxTilesWide+x
+end
+
+function GameBoard:getTileAtIndex(index)
+    return self.board[index]
+end
+
+function GameBoard:getAndRemoveTile(x, y, reserveGridPos)
+    local index = self:getTileIndex(x,y)
+    local tile = self:getTileAtIndex(index)
+    self.board[index] = nil
+    
+    if reserveGridPos then
+        self.boardReserved[index] = true
+    end
+    
     return tile
 end
 
-function GameBoard:isValidMove(x, y, tile)
-    local cell = self.board[y*self.maxTilesWide+x]
-    if cell then
-        return false
-    end
+function GameBoard:freeUpTile(gridPos)
+    self.boardReserved[self:getTileIndex(gridPos.x,gridPos.y)] = nil
+end
+
+function GameBoard:isValidMove(x, y, tile, returningTileIsValid)
+    local reCheckRotatedTile = returningTileIsValid and tile.gridX == x and tile.gridY == y
+    -- -> putting rotated tile back where it came from on board.
     
-    --TODO: use player.tilesLaid to check if player can have tiles (cant be more than 1 ahead of other player)
+    if not reCheckRotatedTile and self:hasTile(x,y,true) then
+        return false
+    end 
+    
+    --TODO?: use player.tilesLaid to check if player can have tiles (cant be more than 1 ahead of other player)
+    -- to stop just using one player, though this is prob not actually needed...
     
     return self:isAdjacentToPlayers(x, y)  --no need to check if player as player square is always full ;)
     --return self:isAdjacentToPlayer(x, y, tile.player) --for alternative rules...
@@ -192,7 +237,7 @@ function GameBoard:canTakeTile(x, y, player)
 end
 
 function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
-    local cell = self.board[y*self.maxTilesWide+x]
+    local startTile = self:getTile(x,y)
     local tile
     local moveCount = 0
     local possibleMoves = {}
@@ -213,11 +258,14 @@ function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
                 -- -1 indicates level complete, returns just the target tile b ut not actually using that atm
                 return -1, tile
             elseif not self:isVisited(tile.gridX, tile.gridY) then
+                dbg.print("get start tile height")
+                local height = startTile:getHeight(false, move)
+                
                 --get list of sides this tile has exits on
                 local entrySides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]] --eg {"down", "up"}
-                local success = false
                 
                 --matching entry/exit sides means move is valid
+                local success = false
                 for k,dir in pairs(entrySides) do
                     if move == "up" and dir == "down" then success = true end
                     if move == "right" and dir == "left" then success = true end
@@ -225,10 +273,15 @@ function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
                     if move == "left" and dir == "right" then success = true end
                     
                     if success then
-                        dbg.print("board: found move: " .. tile.tileType .. " dir" .. move)
-                        moveCount = moveCount + 1
-                        table.insert(possibleMoves, {tile=tile, dir=move})
-                        break
+                        dbg.print("get end tile height")
+                        local newHeight = tile:getHeight(false, dir)
+                        if newHeight == height then
+                            dbg.print("board: found move: " .. tile.tileType .. " dir" .. move)
+                            moveCount = moveCount + 1
+                            table.insert(possibleMoves, {tile=tile, dir=move})
+                            break
+                        end
+                        success = false
                     end
                 end
             end

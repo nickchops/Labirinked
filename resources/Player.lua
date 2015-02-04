@@ -27,14 +27,19 @@ function Player:init(playerNumber, board, otherPlayer)
     self.returnStackSize = 0
 end
 
-function Player:setGridPos(x,y, positionSprite)
+function Player:setGridPos(x,y, positionSprite, visitTile)
     self.x = x
     self.y = y
     self.sprite.zOrder = board:getPlayerDepth(x,y)
+    
     if positionSprite then
-        self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y)
+        self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y,true)
         self.sprite.x = self.sprite.x - self.offset
         self.sprite.y = self.sprite.y - self.offset
+    end
+    
+    if visitTile then
+        board:setVisited(x,y)
     end
 end
 
@@ -172,12 +177,7 @@ function Player:tryToMove()
     --animate
     local targetX
     local targetY
-    targetX, targetY = board:getScreenPosCentre(self.x, self.y)
-    
-    -- hacky temporary make bridges work
-    if tile.tileType == "bridge" then
-        targetY=targetY+self.offset*0.2
-    end
+    targetX, targetY = board:getScreenPosCentre(self.x, self.y, true)
     
     self.sprite.player = self
     tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, time=1, onComplete = Player.reactivatePlayer})
