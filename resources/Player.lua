@@ -192,12 +192,12 @@ end
 
 function Player.drawPath(event)
     local crossSize = getWidth(event.target) *0.4
-    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=event.target.x+event.target.centreOffset, y=event.target.y+event.target.centreOffset, w=crossSize, h=crossSize/4, color={0,0,100}, strokeWidth=0, rotation=45, zOrder=event.target.zOrder+1, alpha=0.7})
+    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=event.target.x+event.target.centreOffset, y=event.target.y+event.target.centreOffset, w=crossSize, h=crossSize/4, color={0,0,100}, strokeWidth=0, rotation=45, zOrder=event.target.zOrder-1, alpha=0.7})
     tween:from(cross, {alpha=0, time=0.2, onComplete=Player.drawCross2})
 end
 
 function Player.drawCross2(target)
-    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=target.x, y=target.y, w=target.w, h=target.h, color=target.color, rotation=135, strokeWidth=0, zOrder=target.zOrder-1, alpha=0.7})
+    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=target.x, y=target.y, w=target.w, h=target.h, color=target.color, rotation=135, strokeWidth=0, zOrder=target.zOrder, alpha=0.7})
     tween:from(cross, {alpha=0, time=0.1})
 end
 

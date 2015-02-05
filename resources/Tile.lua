@@ -1,7 +1,7 @@
 
 Tile = inheritsFrom(baseClass)
 
-tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
+tileTypes = debugTileTypes or { "floor", "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
 --tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime"}
 
 tileTypeCount = 0

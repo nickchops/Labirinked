@@ -79,11 +79,11 @@ function GameBoard:addNewTileToGrid(gridX, gridY, tileType, rotation)
 end
 
 function GameBoard:setDepth(tile)
-    tile.origin.zOrder = self.tilesHigh - tile.gridY
+    tile.origin.zOrder = (self.tilesHigh - tile.gridY) * 10 --allowing 10 levels per row, not using most of them yet!
 end
 
 function GameBoard:getPlayerDepth(x,y)
-    return self.tilesHigh - y + 2 --allow 1 pos between player and tile
+    return (self.tilesHigh - y) * 10 + 2 --allow 1 pos between player and tile
 end
 -- input: grid pos starting at zero. output: screen position
 function GameBoard:getScreenPosCentre(x,y,matchTileHeight)
