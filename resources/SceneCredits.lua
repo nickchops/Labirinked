@@ -5,16 +5,16 @@ sceneCredits = director:createScene()
 sceneCredits.name = "credits"
 
 function sceneCredits:setUp(event)
-    virtualResolution:applyToScene(self)
+    updateVirtualResolution(self)
     
     system:addEventListener({"suspend", "resume", "update"}, self)
 
     self.background = director:createSprite(0, 0, "textures/paper-1024.png")
     self.background.alpha=0.2
     
-    setDefaultSize(self.background, screenWidth, screenHeight)
-    self.background.x = screenMinX
-    self.background.y = screenMinY
+    setDefaultSize(self.background, vr.userWinW, vr.userWinH)
+    self.background.x = vr.userWinMinX
+    self.background.y = vr.userWinMinY
     self.background.zOrder = -1
     
     self.title = director:createSprite({x=appWidth/2, y=appHeight*0.85, xAnchor=0.5, yAnchor=0.5,

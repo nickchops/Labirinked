@@ -51,6 +51,10 @@ function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debu
     print("BOARD WIDE: " .. self.tilesWide)
 end
 
+function GameBoard:getMaxDepth()
+    return self.tilesHigh * 10 -- 10 level per row, last ropw starts at x9
+end
+
 -- add Tile at position. Simple sparse row*column matrix as a table
 function GameBoard:addTile(x,y,tile)
     self.board[y*self.maxTilesWide+x] = tile
@@ -59,8 +63,42 @@ function GameBoard:addTile(x,y,tile)
     self:setDepth(tile)
 end
 
-function GameBoard:setVisited(x,y)
+function GameBoard:setVisited(x, y, checkAndHideForegroundTile, animateHide)
     self.boardVisited[y*self.maxTilesWide+x] = true
+    
+    if checkAndHideForegroundTile then
+        return self:checkAndHideTile(x, y-1, animateHide)
+    end
+end
+
+--hide tile at position if height >=1
+function GameBoard:checkAndHideTile(x, y, animate)
+    local tile = self:getTile(x,y)
+    
+    if tile and tile:getCenterHeight() > self:getTile(x,y+1):getHeight() then
+        dbg.print("hiding tile!")
+        tile:setFade(true, true)
+        return tile -- returns a tile if it hides the tile
+    end
+end
+
+--as above, but check given tile is in front of a player
+function GameBoard:hideTileIfOverPlayer(tile, animate)
+    dbg.print("hide tile...")
+    local height = tile:getHeight()
+    if height < 1 then
+        return
+    end
+    dbg.print("hide tile...2")
+    for k,player in pairs(players) do
+        if player.x == tile.gridX and player.y == tile.gridY+1 and height > self:getTile(player.x,player.y):getHeight() then
+            foundPlayer = true
+            tile:setFade(true, true)
+            tile.overlaps = player
+            player.overlapTile = tile
+            return
+        end
+    end
 end
 
 function GameBoard:isVisited(x,y)
@@ -93,7 +131,7 @@ function GameBoard:getScreenPosCentre(x,y,matchTileHeight)
     if matchTileHeight then
         local tile = self:getTile(x,y)
         local height = tile:getHeight(true)
-        retY = retY + height*self.halfTile*2
+        retY = retY + height*self.halfTile*1.7
     end
     
     return retX, retY

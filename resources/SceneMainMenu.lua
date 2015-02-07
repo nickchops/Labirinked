@@ -2,13 +2,6 @@
 require("helpers/Utility")
 require("helpers/NodeUtility")
 
--- These are user space coords for screen edges that will inc letterbox areas
--- that VirtualResolution has created
-menuScreenMinX = appWidth/2 - screenWidth/2
-menuScreenMaxX = appWidth/2 + screenWidth/2
-menuScreenMinY = appHeight/2 - screenHeight/2
-menuScreenMaxY = appHeight/2 + screenHeight/2
-
 sceneMainMenu = director:createScene()
 sceneMainMenu.name = "menu"
 
@@ -33,14 +26,14 @@ function sceneMainMenu:startup()
         tween:to(self.backgroundLines, {alpha=1, time=2})
         tween:to(self.backgroundLogo, {alpha=1, time=2})
         
-        tween:from(self.mainMenu, {alpha=0, time=2.0, onComplete=enableMainMenu})
+        tween:from(self.mainMenu, {alpha=0, time=1.6, onComplete=enableMainMenu})
         local delay = 0.3
         for k,v in ipairs(self.btnsOrdered) do
-            tween:to(v, {alpha=1, time=0.5, delay=delay})
+            tween:to(v, {alpha=1, time=0.4, delay=delay})
             if v.label then
-                tween:to(v.label, {alpha=1, time=0.5, delay=delay})
+                tween:to(v.label, {alpha=1, time=0.4, delay=delay})
             end
-            delay = delay +0.3
+            delay = delay +0.15
         end
     --else
     --    enableMainMenu()
@@ -55,7 +48,7 @@ function sceneMainMenu:setUp(event)
     system:addEventListener({"suspend", "resume", "update"}, self)
 
     -- turn scaling on for the scene
-    virtualResolution:applyToScene(self)
+    updateVirtualResolution(self)
 
     -- loads scores etc from local storage
     if not startupFlag then loadUserData() end
@@ -63,9 +56,9 @@ function sceneMainMenu:setUp(event)
     self.background = director:createSprite(0, 0, "textures/paper-1024.png")
     
     -- sprites are scaled to file size by default so we set a deafult size
-    setDefaultSize(self.background, screenWidth, screenHeight)
-    self.background.x = screenMinX
-    self.background.y = screenMinY
+    setDefaultSize(self.background, vr.userWinW, vr.userWinH)
+    self.background.x = vr.userWinMinX
+    self.background.y = vr.userWinMinY
     
     self.backgroundLines = director:createSprite(0, 0, "textures/menu_bg.png")
     setDefaultSize(self.backgroundLines, appWidth, appHeight)
@@ -102,10 +95,10 @@ function sceneMainMenu:setUp(event)
         sceneMainMenu:addButton("quit", "text", "Quit", -300, -450, 140, sceneMainMenu.touchQuit, 140)
     end    
     
-    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, sceneMainMenu.touchStart)
-
     sceneMainMenu:addButton("credits", "image", "menu_credits.png", 300, -380, 140, sceneMainMenu.touchCredits)
     
+    sceneMainMenu:addButton("start", "image", "menu_newgame.png", 0, -350, 240, sceneMainMenu.touchStart)
+
     self.background.alpha=0
     self.backgroundLines.alpha=0
     self.backgroundLogo.alpha=0
@@ -267,7 +260,7 @@ function touchScores(self, event)
         local btnScale = sceneMainMenu.btns.scores.defaultScaleX
         tween:to(sceneMainMenu.btns.scores, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
         tween:to(sceneMainMenu.btns.scores, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2})
-        tween:to(sceneMainMenu.mainMenu, {x=menuScreenMinX-300, time=0.5, delay=0.3, onComplete=menuDisplayHighScores})
+        tween:to(sceneMainMenu.mainMenu, {x=vr.userWinMinX-300, time=0.5, delay=0.3, onComplete=menuDisplayHighScores})
     end
 end
 
@@ -314,7 +307,7 @@ end
 
 function menuDisplayHighScores(target)
     -- create title and list of scores off screen
-    sceneMainMenu.scoreLabels = director:createNode({x=menuScreenMaxX+300, y=appHeight-100})
+    sceneMainMenu.scoreLabels = director:createNode({x=vr.userWinMaxX+300, y=appHeight-100})
     sceneMainMenu.scoreLabels.title = director:createLabel({x=0, y=0, w=250, h=50, xAnchor=0.5, xScale=2, yScale=2,
             yAnchor=0.5, hAlignment="center", vAlignment="bottom", text="HIGH SCORES", color=titleCol, font=fontMainTitle})
     sceneMainMenu.scoreLabels:addChild(sceneMainMenu.scoreLabels.title)

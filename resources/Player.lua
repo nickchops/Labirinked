@@ -27,10 +27,17 @@ function Player:init(playerNumber, board, otherPlayer)
     self.returnStackSize = 0
 end
 
-function Player:setGridPos(x,y, positionSprite, visitTile)
+function Player:setGridPos(x,y, positionSprite, visitTile, setDepthNow)
     self.x = x
     self.y = y
-    self.sprite.zOrder = board:getPlayerDepth(x,y)
+    
+    if setDepthNow then
+        self.sprite.zOrder = board:getPlayerDepth(x,y)
+    else
+        -- when moving, player and crosses can be on old or new tile, needs to overlap both
+        self.sprite.destinationZ = board:getPlayerDepth(x,y)
+        self.sprite.zOrder = math.max(self.sprite.zOrder, self.sprite.destinationZ) - 1
+    end
     
     if positionSprite then
         self.sprite.x, self.sprite.y = board:getScreenPosCentre(x,y,true)
@@ -39,7 +46,10 @@ function Player:setGridPos(x,y, positionSprite, visitTile)
     end
     
     if visitTile then
-        board:setVisited(x,y)
+        self.overlapTile = board:setVisited(x,y, true)
+        if self.overlapTile then
+            self.overlapTile.overlaps = player
+        end
     end
 end
 
@@ -168,10 +178,14 @@ function Player:tryToMove()
     self:addPossibleMoves(newMoves)
     
     --make move
-    self:setGridPos(tile.gridX, tile.gridY, false)
-    board:setVisited(self.x, self.y)
+    if self.overlapTile then
+        self.overlapTile:setFade(false, true)
+        self.overlapTile = nil
+    end
     
-    --tile logic - TODO: add more here!
+    self:setGridPos(tile.gridX, tile.gridY, false, true)
+    
+    --tile change logic (powerups, effects, etc)
     tile:process(player)
     
     --animate
@@ -192,7 +206,9 @@ end
 
 function Player.drawPath(event)
     local crossSize = getWidth(event.target) *0.4
+    
     local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=event.target.x+event.target.centreOffset, y=event.target.y+event.target.centreOffset, w=crossSize, h=crossSize/4, color={0,0,100}, strokeWidth=0, rotation=45, zOrder=event.target.zOrder-1, alpha=0.7})
+    
     tween:from(cross, {alpha=0, time=0.2, onComplete=Player.drawCross2})
 end
 
@@ -203,6 +219,7 @@ end
 
 function Player.reactivatePlayer(target)
     -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
+    target.zOrder = target.destinationZ
     if not target.player:tryToMove() then
         dbg.print("tryToMove failed in reactivatePlayer(" .. target.player.id .. ") should have already set phase to ready...")
     end

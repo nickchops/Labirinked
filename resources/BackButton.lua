@@ -170,10 +170,10 @@ end
 function backButtonHelper:setCenterPosition(x,y)
     if self.backBtn then
         if x then
-            self.backbtn.x=x
+            self.backBtn.x=x
         end
         if y then
-            self.backbtn.y=y
+            self.backBtn.y=y
         end
     end
 end

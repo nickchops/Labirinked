@@ -14,20 +14,16 @@ vr = virtualResolution
 vr:initialise{userSpaceW=appWidth, userSpaceH=appHeight}
 
 function updateVirtualResolution(scene)
+    vr:update()
     if (scene) then
-        virtualResolution:update()
-        virtualResolution:applyToScene(scene)
+        vr:applyToScene(scene)
+        
+        if (scene.background) then
+            setDefaultSize(scene.background, vr.userWinW, vr.userWinH)
+            scene.background.x = vr.userWinMinX
+            scene.background.y = vr.userWinMinY
+        end
     end
-    
-    -- User space values of screen edges: for detecting edges of full screen area, including letterbox/borders
-    -- Useful for making sure things are on/off screen when needed
-    screenWidth = vr:winToUserSize(director.displayWidth)
-    screenHeight = vr:winToUserSize(director.displayHeight)
-
-    screenMinX = appWidth/2 - screenWidth/2
-    screenMaxX = appWidth/2 + screenWidth/2
-    screenMinY = appHeight/2 - screenHeight/2
-    screenMaxY = appHeight/2 + screenHeight/2
 end
 
 updateVirtualResolution(nil)

@@ -11,21 +11,20 @@ sceneGame = director:createScene()
 sceneGame.name = "game"
 
 menuHeight = 130
-tileQueueY = (menuHeight/3+10) + screenMinY/2
+--tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
 tilesWide = debugTilesWide or 12
 
 function sceneGame:setUp(event)
-    virtualResolution:applyToScene(self)
+    updateVirtualResolution(self)
     
     system:addEventListener({"suspend", "resume", "update"}, self)
 
     self.background = director:createSprite(0, 0, "textures/paper-1024.png")
     self.background.alpha=0.2
-    setDefaultSize(self.background, screenWidth, screenHeight)
-    self.background.x = screenMinX
-    self.background.y = screenMinY
+    setDefaultSize(self.background, vr.userWinW, vr.userWinH)
+    self.background.x = vr.userWinMinX
+    self.background.y = vr.userWinMinY
     self.background.zOrder = -1
-    
     
     math.randomseed(os.time())
     
@@ -36,6 +35,7 @@ function sceneGame:setUp(event)
     tileQueue = {}
     tileQueueMax = 4
     tileQueueSize = 0
+    tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
     
     tileXSpace = 20
 
@@ -62,13 +62,13 @@ function sceneGame:setUp(event)
     local p2StartY = 0
     
     self.startTile1 = board:addNewTileToGrid(p1StartX, p1StartY, "floor", 1)
-    player1:setGridPos(p1StartX, p1StartY, true, true)
+    player1:setGridPos(p1StartX, p1StartY, true, true, true)
     player1:addPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
     self.startTile2 = board:addNewTileToGrid(p2StartX, p2StartY, "floor", 1)
-    player2:setGridPos(p2StartX, p2StartY, true, true)
+    player2:setGridPos(p2StartX, p2StartY, true, true, true)
     player2:addPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
@@ -166,14 +166,16 @@ end
 function sceneGame:orientation(event)
     updateVirtualResolution(self)
     
-    tileQueueY = (menuHeight/3+10) + screenMinY/2
+    tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
     
-    for k,tile in pairs(tileQueueMax) do
-        tile.startY = tileQueueY
-        tile.origin.y = tileQueueY
+    for i=1,tileQueueMax do
+        if tileQueue[i] then
+            tileQueue[i].startY = tileQueueY
+            tileQueue[i].origin.y = tileQueueY
+        end
     end
     
-    backButtonHelper:setCenterPosition(nil, 55+screenMinY)
+    backButtonHelper:setCenterPosition(nil, 55 + vr.userWinMinY)
 end
 
 
@@ -187,7 +189,7 @@ sceneGame:addEventListener({"setUp", "enterPostTransition", "exitPreTransition",
 
 function sceneGame.showPieces()
     local self = sceneGame
-    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55+screenMinY, btnWidth=80,
+    backButtonHelper:add({listener=self.quit, xCentre=80, yCentre=55+vr.userWinMinY, btnWidth=80,
             btnTexture=btnBackTexture, pulse=false, activateOnRelease=true, animatePress=true,
             deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
     
@@ -277,7 +279,7 @@ end
 function createTile(screenX, screenY, tileType, rotation)
     local tile = Tile:create()
     tile:init(screenX, screenY, tileType, rotation, board.tileWidth)
-    tile.origin.zOrder=board.tilesHigh+2
+    tile:bringToFront()
     return tile
 end
 
@@ -335,6 +337,7 @@ function sceneGame:touch(event)
                     finger.dragTile.finger = finger
                     finger.startX = x
                     finger.startY = y
+                    tile:bringToFront()
                     print("TOUCH START SUCCESS")
                     break
                 elseif tile.finger then
@@ -363,6 +366,11 @@ function sceneGame:touch(event)
                             finger.dragTile = gotTile
                             finger.startX = x
                             finger.startY = y
+                            gotTile:bringToFront()
+                            
+                            
+                            --TODO: setFade false on tile, cancel player overlap flag if needed.
+                            -- also need to check fad is applied again on returning to original spot...
                         end
                         if not finger.dragTile.players then finger.dragTile.players={} end
                         finger.dragTile.players[player.id] = player

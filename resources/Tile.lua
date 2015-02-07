@@ -1,8 +1,8 @@
 
 Tile = inheritsFrom(baseClass)
 
-tileTypes = debugTileTypes or { "floor", "floor", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
---tileTypes = debugTileTypes or { "floor", "corner", "road", "bridge", "threeway", "extratime"}
+--tileTypes = debugTileTypes or { "floor", "stairAscend", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
+tileTypes = debugTileTypes or { "floor", "stairAscend", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised" }
 
 tileTypeCount = 0
 for k,v in pairs(tileTypes) do
@@ -76,7 +76,7 @@ tileHeights = { floor={0},
  --Plus add logic to put bridges on rivers. Maybe allow bridges
  -- on top of roads? Or force user to swap them out?
 
-tileAlpha = 0.9
+tileAlpha = 0.95
 
 --x and y are screen positions since doesnt usually start on the grid
 function Tile:init(x, y, tileType, rotation, tileWidth)
@@ -173,6 +173,32 @@ function Tile:getHeight(visualAdjust, dir)
     return height
 end
 
+function Tile:setFade(faded, animate)
+    local alpha = tileAlpha
+    if faded == true then alpha = 0.3 end
+    
+    -- we're tracking if tile and player overlap, but not doing anything with that info
+    -- atm. Just always trying to fade back and resetting flags when we do
+    if self.overlaps then
+        self.overlaps.overlapTile = nil
+        self.overlaps = nil
+    end
+    
+    if self.sprite.alpha == alpha then return end
+    
+    cancelTweensOnNode(self.sprite)
+    
+    if animate then
+        tween:to(self.sprite, {alpha=alpha, time=0.6})
+    else
+        self.sprite.alpha=alpha
+    end  
+end
+
+function Tile:getCenterHeight()
+    return tileHeights[self.tileType][1]
+end
+
 function Tile:canRotate()
     return tileRotations[self.tileType][2]--array larger than 1
 end
@@ -223,6 +249,11 @@ function Tile:setPosCentered(x,y)
     self.origin.y = y
 end
 
+function Tile:bringToFront()
+    self.origin.zOrder = board:getMaxDepth() + 2
+    self:setFade(false,true)
+end
+
 function tilePlaced(target)
     local tile = target.tile
     if not tile.startSlot then
@@ -261,6 +292,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
             -- prob do this by leaving this as-is and setting the startSlot val elsewhere...
             self.x, self.Y = board:getScreenPosCentre(self.gridX, self.gridY)
             tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
+            board:hideTileIfOverPlayer(self, true)
         end
         return false, false
     else
@@ -270,6 +302,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
         self.gridY = gridY
         self.x, self.y = board:getScreenPosCentre(gridX,gridY)
         tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
+        board:hideTileIfOverPlayer(self, true)
         
         if self.startSlot then
             dbg.print("got a start slot")
