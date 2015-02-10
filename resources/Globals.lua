@@ -2,9 +2,9 @@
 -- Debugging --
 
 --debugOn = true
---debugTileTypes = {"floor", "stairAscend", "roadRaised"}
+--debugTileTypes = {"threeway"}-- {"floor", "stairAscend", "roadRaised"}
 
-require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
+--require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 
 -------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winloose = "loose"
-gameInfo.levelTime = 600
+gameInfo.levelTime = 60
 
 tapThreshold = 5 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
 

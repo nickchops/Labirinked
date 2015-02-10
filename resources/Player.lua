@@ -22,7 +22,7 @@ function Player:init(playerNumber, board, otherPlayer)
     -- at each time layout changes
     self.tilesLaid = 0
     self.possibleMoves = {}
-    self.moveStackSize = 0
+    --self.moveStackSize = 0
     self.returnMoves = {}
     self.returnStackSize = 0
 end
@@ -53,9 +53,14 @@ function Player:setGridPos(x,y, positionSprite, visitTile, setDepthNow)
     end
 end
 
+--[[
 function Player:addPossibleMoves(moves)
     table.insert(self.possibleMoves, moves)
     self.moveStackSize = self.moveStackSize + 1
+end
+]]--
+function Player:setPossibleMoves(moves)
+    self.possibleMoves = moves
 end
 
 function Player:tryToMove()
@@ -67,7 +72,7 @@ function Player:tryToMove()
     
     -- possibleMoves is directions can move on current tile
     -- doesn't include direction player came from
-    local moves = self.possibleMoves[self.moveStackSize]
+    local moves = self.possibleMoves --[self.moveStackSize]
     local moveCount
     local moveList
     
@@ -148,13 +153,16 @@ function Player:tryToMove()
     
     dbg.print("Move chosen: " .. move.dir .. " onto " .. move.tile.tileType .. " tile with rotation " .. move.tile.rotation)
     
+    self.lastMove = move.dir
+    
     --might be useful for back-tracking? Not currently used
     self.returnStackSize = self.returnStackSize + 1
     table.insert(self.returnMoves, board:getReverse(dir))
     
     --figure out *next* possible move once on the tile
     local tileSides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]]
-    local newMoves = {}
+    --local newMoves = {}
+    self.possibleMoves = {}
     
     dbg.print("Exits on new square:")
     
@@ -162,7 +170,8 @@ function Player:tryToMove()
         dbg.print(v)
         if not (v == "up" and dir == "down") and not (v == "left" and dir == "right")
                 and not (v == "down" and dir == "up") and not (v == "right" and dir == "left") then
-            table.insert(newMoves, v)
+            --table.insert(newMoves, v)
+            table.insert(self.possibleMoves, v)
         end
     end
     
@@ -175,7 +184,7 @@ function Player:tryToMove()
         end
     end
     
-    self:addPossibleMoves(newMoves)
+    --self:addPossibleMoves(newMoves)
     
     --make move
     if self.overlapTile then

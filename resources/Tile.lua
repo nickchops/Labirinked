@@ -2,11 +2,11 @@
 Tile = inheritsFrom(baseClass)
 
 --tileTypes = debugTileTypes or { "floor", "stairAscend", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised", "roadRaisedGateway", "roadRaisedOverpass" }
-tileTypes = debugTileTypes or { "floor", "stairAscend", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised" }
+Tile.tileTypes = debugTileTypes or { "floor", "stairAscend", "corner", "road", "bridge", "threeway", "extratime", "blocker", "stairAscend", "floorRaised", "roadRaised" }
 
-tileTypeCount = 0
-for k,v in pairs(tileTypes) do
-    tileTypeCount = tileTypeCount + 1
+Tile.tileTypeCount = 0
+for k,v in pairs(Tile.tileTypes) do
+    Tile.tileTypeCount = Tile.tileTypeCount + 1
 end
 
 -- Directions supported. 1=0deg, 2=90cw, 3=180, 4=270cw.
@@ -16,7 +16,7 @@ tileRotations = { floor={1}, corner={1,2,3,4}, road={1,2}, bridge={1},
         threeway={1,2,3,4}, extratime={1}, blocker={1}, stairAscend = {1,3},
         floorRaised = {1}, roadRaised = {1}, roadRaisedGateway = {1}, roadRaisedOverpass = {1}
         }
-    
+
 -- NB: self.rotation indicates which of the above is used, not actual rotation.
 -- Actual rotation of the tile is: tileRotations[tile.tileType][tile.rotation]
 
@@ -119,7 +119,7 @@ function Tile:createSprite(startAlpha,x,y)
             suffix = "-vert" --doesnt exist yet but wont ever be hit
         end
     elseif self.tileType == "stairAscend" then
-        if self.rotation == 1 or self.rotation == 3 then
+        if self.rotation == 1 or self.rotation == 2 then -- 2->3!
             suffix = "-horiz"
         else
             suffix = rotation --also doesnt exist
@@ -141,6 +141,8 @@ function Tile:createSprite(startAlpha,x,y)
     if self.gridY then
         board:setDepth(self)
     end
+    
+    self:setRotation()
 end
 
 function Tile:getHeight(visualAdjust, dir)
@@ -231,12 +233,14 @@ end
 
 
 function Tile:setRotation()
+    local rotation = tileRotations[self.tileType][self.rotation]
+    
     if self.tileType == "stairAscend" then
-        self.sprite.xFlip = self.rotation == 2
+        self.sprite.xFlip = rotation == 3
         return
     end
     
-    self.origin.rotation = (self.rotation - 1) * 90
+    self.origin.rotation = (rotation - 1) * 90
 end
 
 function Tile:setPos(x,y)

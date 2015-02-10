@@ -30,6 +30,8 @@ function sceneWinLose:setUp(event)
     self.title = director:createSprite({x=appWidth/2, y=390, xAnchor=0.5, yAnchor=0.5, source="textures/" .. title_texture})
     setDefaultSize(self.title, 220)
     self.title.alpha=0
+    
+    gameInfo.winloose = "loose"
 end
 
 function sceneWinLose:enterPostTransition(event)
@@ -42,7 +44,7 @@ function sceneWinLose.activateButtons()
 
     sceneWinLose:addButton("menu", "image", "menu_button.png", 0, 0, 180, sceneWinLoseTouchMenu)
     if gameInfo.winLose == "win" then
-        sceneWinLose:addButton("retry", "image", "next_level.png", 0, -440, 80, sceneWinLoseTouchRetry)
+        sceneWinLose:addButton("retry", "image", "next_level.png", 0, -440, 160, sceneWinLoseTouchRetry)
     else
         sceneWinLose:addButton("retry", "image", "retry.png", 0, -440, 80, sceneWinLoseTouchRetry)
     end

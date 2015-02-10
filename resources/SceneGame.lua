@@ -11,7 +11,7 @@ sceneGame = director:createScene()
 sceneGame.name = "game"
 
 menuHeight = 130
---tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
+--tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
 tilesWide = debugTilesWide or 12
 
 function sceneGame:setUp(event)
@@ -31,11 +31,13 @@ function sceneGame:setUp(event)
     --softPad =  OnScreenDPad.Create({x=100,   y=100, baseRadius=appWidth/13, topRadius=appWidth/23})
     --btnA = OnScreenButton.Create({x=80, y=appWidth-100, radius=15, topColor=color.red, baseColor=color.darkRed, scale3d=5, depth3d=5})
     --btnB = OnScreenButton.Create({x=30, y=appWidth-100, radius=15, topColor=color.green, baseColor=color.darkGreen, scale3d=5, depth3d=5})
+    
+    self:generateQueueOfTiles(10, Tile.tileTypes)
 
-    tileQueue = {}
-    tileQueueMax = 4
-    tileQueueSize = 0
-    tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
+    tileSlots = {} -- tiles at bottom of screen
+    tileSlotsMax = 4
+    tileSlotsSize = 0
+    tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
     
     tileXSpace = 20
 
@@ -63,46 +65,79 @@ function sceneGame:setUp(event)
     
     self.startTile1 = board:addNewTileToGrid(p1StartX, p1StartY, "floor", 1)
     player1:setGridPos(p1StartX, p1StartY, true, true, true)
-    player1:addPossibleMoves({"down","right"})
+    player1:setPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
     self.startTile2 = board:addNewTileToGrid(p2StartX, p2StartY, "floor", 1)
     player2:setGridPos(p2StartX, p2StartY, true, true, true)
-    player2:addPossibleMoves({"up","left"})
+    player2:setPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
     
     -- set some tiles to play with to start
 end
 
-function sceneGame:queueTile(time, number)
+function sceneGame:generateQueueOfTiles(size, tileTypes)
+    self.tileQueue = {}
+    self.tileQueueSize = size
+    self.tileTypes = tileTypes
+    self.tileTypeCount = 0
+    for k,v in pairs(tileTypes) do
+        self.tileTypeCount = self.tileTypeCount + 1
+    end
+    
+    for i=1,size do
+        self.tileQueue[i] = self:generateTile()
+    end
+end
+
+function sceneGame:generateTile(tileTypes)
+    local tileType = self.tileTypes[math.random(1, self.tileTypeCount)]
+    local dir = math.random(1, 4)
+    while not tileRotations[tileType][dir] do
+        dir = dir + 1
+        if dir > 4 then dir = 1 end
+    end
+    return {tileType=tileType, dir=dir}
+end
+
+function sceneGame:dequeueTile()
+    local tile = self.tileQueue[self.tileQueueSize]
+    self.tileQueueSize = self.tileQueueSize - 1
+    return tile
+end
+
+function sceneGame:queueTilesForSlots(time, number)
+    dbg.print("queueTilesForSlots")
     if not self.tileQueueTimers then
         self.tileQueueTimers = {}
         self.tileTimerCount = 0
     end
     self.tileTimerCount = self.tileTimerCount + 1
     
-    local tileTimer = system:addTimer(sceneGame.addTileToQueue, time, number)
+    local tileTimer = system:addTimer(sceneGame.addTileToSlots, time, number)
     tileTimer.id = self.tileTimerCount
     self.tileQueueTimers[tileTimer.id] = tileTimer
 end
 
-function sceneGame.addTileToQueue(event)
-    if event.timer.doneIterations == event.timer.iterations then
-        self.tileQueueTimers[event.timer.id] = nil
+function sceneGame.addTileToSlots(event)
+    dbg.print("addTileToSlots")
+    if event.doneIterations == event.timer.iterations then
+        sceneGame.tileQueueTimers[event.timer.id] = nil
     end
     
-    if tileQueueSize >= tileQueueMax then
+    if tileSlotsSize >= tileSlotsMax then
         return
     end
     
-    tileQueueSize = tileQueueSize +1
+    tileSlotsSize = tileSlotsSize +1
     local tileX
     
+    --get first empty slot
     local slot = nil
-    for i=1,tileQueueMax do
-        if not slot and not tileQueue[i] then
+    for i=1,tileSlotsMax do
+        if not slot and not tileSlots[i] then
             slot = i
         end
     end
@@ -113,20 +148,28 @@ function sceneGame.addTileToQueue(event)
         tileX = appWidth/2 + (board.tileWidth+tileXSpace)*slot/2 - board.tileWidth/2 + 50
     end
     
-    local newType = tileTypes[math.random(1, tileTypeCount)]
-    local newTile = createTile(tileX, tileQueueY, newType, 1)
+    local tileInfo
+    if sceneGame.tileQueueSize > 0 then
+        dbg.print("dequeue")
+        tileInfo = sceneGame:dequeueTile()
+    else
+        dbg.print("generate")
+        tileInfo = sceneGame:generateTile()
+    end
+    
+    local newTile = createTile(tileX, tileSlotsY, tileInfo.tileType, tileInfo.dir)
     newTile.startX = tileX
-    newTile.startY = tileQueueY
+    newTile.startY = tileSlotsY
     newTile.startSlot = slot --indicates it's in the queue or being dragged about but not just put onto the grid
     newTile.available = false
     tween:to(newTile.sprite, {alpha=tileAlpha, time=0.5, onComplete=activateTile})
     newTile.sprite.tile = newTile
-    tileQueue[slot] = newTile
+    tileSlots[slot] = newTile
 end
 
-function sceneGame:tileQueueFadeOut(onComplete, duration)
+function sceneGame:tileSlotsFadeOut(onComplete, duration)
     dbg.print("fadeout queue")
-    for k,tile in pairs(tileQueue) do
+    for k,tile in pairs(tileSlots) do
         --dbg.print("fadeout queue: slot=" .. k .. " xy=" .. tile.startX .. "," .. tile.startY .. " " .. tile.tileType)
         tween:to(tile.sprite, {alpha=0, time=duration})
     end
@@ -148,7 +191,7 @@ function sceneGame:exitPostTransition(event)
     backButtonHelper:remove()
         
     --globals to tear down
-    tileQueue = nil
+    tileSlots = nil
     board = nil
     player1 = nil
     player2 = nil
@@ -166,12 +209,12 @@ end
 function sceneGame:orientation(event)
     updateVirtualResolution(self)
     
-    tileQueueY = (menuHeight/3+10) + vr.userWinMinY/2
+    tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
     
-    for i=1,tileQueueMax do
-        if tileQueue[i] then
-            tileQueue[i].startY = tileQueueY
-            tileQueue[i].origin.y = tileQueueY
+    for i=1,tileSlotsMax do
+        if tileSlots[i] then
+            tileSlots[i].startY = tileSlotsY
+            tileSlots[i].origin.y = tileSlotsY
         end
     end
     
@@ -197,14 +240,14 @@ function sceneGame.showPieces()
         tween:from(backButtonHelper.backBtn, {alpha=0, time=0.2})
     end
     
-    self:queueTile(0.3, 4)
+    self:queueTilesForSlots(0.3, 4)
     
     tween:to(self.startTile1.sprite, {alpha = tileAlpha, time=1.0, delay=0.5, onComplete=sceneGame.startPlay})
     tween:to(self.startTile2.sprite, {alpha = tileAlpha, time=1.0, delay=0.5})
     tween:to(player1.sprite, {alpha = 1, time=1.0, delay=1.0})
     tween:to(player2.sprite, {alpha = 1, time=1.0, delay=1.0})
     
-    self.levelTimerNode = director:createNode({x=appWidth/2, y=tileQueueY})
+    self.levelTimerNode = director:createNode({x=appWidth/2, y=tileSlotsY})
     self.levelTimerNode.label = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
             xScale=1.5, yScale=1.5})
     self.levelTimerNode:addChild(self.levelTimerNode.label)
@@ -236,7 +279,7 @@ function sceneGame.levelTimerFunc(event)
         dbg.print("time up, pausing play")
         sceneGame:pausePlay()
         board:fadeOut(sceneGame.gotoWinLose, 5)
-        sceneGame:tileQueueFadeOut(3)
+        sceneGame:tileSlotsFadeOut(3)
     else
         tween:to(event.target, {xScale=1, yScale=1, time=0.9})
     end
@@ -296,7 +339,7 @@ function sceneGame:levelCleared()
     sceneGame:pausePlay()
     gameInfo.winLose = "win"
     board:fadeOut(sceneGame.gotoWinLose, 7)
-    self:tileQueueFadeOut(3)
+    self:tileSlotsFadeOut(3)
 end
 
 -----------------------------------------------------------------
@@ -329,7 +372,7 @@ function sceneGame:touch(event)
     
     if event.phase == "began" and finger.phase == "ready" then
         if y < menuHeight then
-            for k,tile in pairs(tileQueue) do
+            for k,tile in pairs(tileSlots) do
                 if (not tile.finger) and tile.available and
                         x > tile.startX-board.tileWidth/2 and x < tile.startX+board.tileWidth/2 then
                     finger.phase = "placingTile"
@@ -427,9 +470,10 @@ function sceneGame:touch(event)
             
             if tileWasFromQueue then --if added a tile from the queue (not dragged from other spot on board) -> new tile
                 print("TOUCH END queuing new tile")
-                tileQueueSize = tileQueueSize -1
-                tileQueue[tileWasFromQueue] = nil
-                self:queueTile(0.5, 1)
+                tileSlotsSize = tileSlotsSize -1
+                tileSlots[tileWasFromQueue] = nil
+                dbg.print("QUEUE TILE!!!!")
+                self:queueTilesForSlots(0.5, 1)
             end
             
         end
