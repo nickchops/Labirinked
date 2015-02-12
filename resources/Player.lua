@@ -6,10 +6,16 @@ function Player:init(playerNumber, board, otherPlayer)
     self.sprite = director:createSprite({x=0, y=0, source="textures/player.png", alpha=0.7})
     setDefaultSize(self.sprite, board.tileWidth*0.5)
     self.sprite.centreOffset = getWidth(self.sprite)/2
+    
     self.board = board
     self.phase="ready"
     self.offset = getWidth(self.sprite)/2
     self.otherPlayer = otherPlayer
+    
+    self.canBacktrack = true --allows turning off by player (not used yet)...
+    self.backtrackMoves = {}
+    self.movesMade = 0
+    self.pathMarkers = {}
     
     if playerNumber == 1 then
         self.sprite.color = color.pink
@@ -22,7 +28,7 @@ function Player:init(playerNumber, board, otherPlayer)
     -- at each time layout changes
     self.tilesLaid = 0
     self.possibleMoves = {}
-    --self.moveStackSize = 0
+    
     self.returnMoves = {}
     self.returnStackSize = 0
 end
@@ -46,19 +52,13 @@ function Player:setGridPos(x,y, positionSprite, visitTile, setDepthNow)
     end
     
     if visitTile then
-        self.overlapTile = board:setVisited(x,y, true)
+        self.overlapTile = board:setVisited(x,y, true, true, true)
         if self.overlapTile then
             self.overlapTile.overlaps = player
         end
     end
 end
 
---[[
-function Player:addPossibleMoves(moves)
-    table.insert(self.possibleMoves, moves)
-    self.moveStackSize = self.moveStackSize + 1
-end
-]]--
 function Player:setPossibleMoves(moves)
     self.possibleMoves = moves
 end
@@ -153,11 +153,10 @@ function Player:tryToMove()
     
     dbg.print("Move chosen: " .. move.dir .. " onto " .. move.tile.tileType .. " tile with rotation " .. move.tile.rotation)
     
-    self.lastMove = move.dir
-    
-    --might be useful for back-tracking? Not currently used
-    self.returnStackSize = self.returnStackSize + 1
-    table.insert(self.returnMoves, board:getReverse(dir))
+    -- just store directions so can move in reverse of them
+    self.movesMade = self.movesMade + 1
+    self.backtrackMoves[self.movesMade] = {dir=board:getReverse(dir), tile=board:getTile(self.x, self.y)}
+    self.pathMarkers[self.movesMade] = {}
     
     --figure out *next* possible move once on the tile
     local tileSides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]]
@@ -184,18 +183,24 @@ function Player:tryToMove()
         end
     end
     
-    --self:addPossibleMoves(newMoves)
+    self:move(tile, false)
     
-    --make move
+    Player.drawPath({target=self.sprite})
+    self.sprite:addTimer(Player.drawPath, 0.33, 2)
+
+    return true
+end
+
+function Player:move(targetTile, backtrack)
     if self.overlapTile then
         self.overlapTile:setFade(false, true)
         self.overlapTile = nil
     end
     
-    self:setGridPos(tile.gridX, tile.gridY, false, true)
+    self:setGridPos(targetTile.gridX, targetTile.gridY, false, true)
     
     --tile change logic (powerups, effects, etc)
-    tile:process(player)
+    targetTile:process(player)
     
     --animate
     local targetX
@@ -204,34 +209,66 @@ function Player:tryToMove()
     
     self.sprite.player = self
     tween:to(self.sprite, {x = targetX - self.offset, y = targetY - self.offset, time=1, onComplete = Player.reactivatePlayer})
-    --TODO: set height and zOrder depending on tile height!
-    
-    Player.drawPath({target=self.sprite})
-    self.sprite:addTimer(Player.drawPath, 0.33, 2)
-    
+
     dbg.print("------------------------------------------")
-    return true
 end
 
 function Player.drawPath(event)
     local crossSize = getWidth(event.target) *0.4
     
     local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=event.target.x+event.target.centreOffset, y=event.target.y+event.target.centreOffset, w=crossSize, h=crossSize/4, color={0,0,100}, strokeWidth=0, rotation=45, zOrder=event.target.zOrder-1, alpha=0.7})
-    
+    cross.player = event.target.player
     tween:from(cross, {alpha=0, time=0.2, onComplete=Player.drawCross2})
 end
 
 function Player.drawCross2(target)
-    local cross = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=target.x, y=target.y, w=target.w, h=target.h, color=target.color, rotation=135, strokeWidth=0, zOrder=target.zOrder, alpha=0.7})
-    tween:from(cross, {alpha=0, time=0.1})
+    local cross2 = director:createRectangle({xAnchor=0.5, yAnchor=0.5, x=target.x, y=target.y, w=target.w, h=target.h, color=target.color, rotation=135, strokeWidth=0, zOrder=target.zOrder, alpha=0.7})
+    tween:from(cross2, {alpha=0, time=0.1})
+    
+    local player = target.player
+    table.insert(player.pathMarkers[player.movesMade], {target, cross2})
 end
 
-function Player.reactivatePlayer(target)
-    -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
-    target.zOrder = target.destinationZ
-    if not target.player:tryToMove() then
-        dbg.print("tryToMove failed in reactivatePlayer(" .. target.player.id .. ") should have already set phase to ready...")
+function Player:removePath(event)
+    -- crosses are in scenegraph so we can just queue timers to hide them all at once
+    -- NB: code assumes 3 crosses! counts go down as need to remove in reverse order
+    local crossPairs = self.pathMarkers[self.movesMade]
+    local pairCount = 2
+    for k,crosses in ipairs(crossPairs) do
+        local crossCount = 1
+        for j,cross in ipairs(crosses) do
+            tween:to(cross, {delay=0.33*pairCount+0.2*crossCount, alpha=0, time=0.2, onComplete=destroyNode})
+            crossCount = crossCount - 1
+        end
+        pairCount = pairCount - 1
     end
+end
+
+function Player.reactivatePlayer(target)    
+    target.zOrder = target.destinationZ
+    local player = target.player
+
+    if player.phase == "backtracking" then
+        player.phase = "ready"
+        return
+    end
+    
+    -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
+    if not player:tryToMove() then
+        dbg.print("tryToMove failed in reactivatePlayer(" .. player.id .. ") should have already set phase to ready...")
+    end
+end
+
+function Player:backtrack()
+    print("BACKTRACK!")
+    
+    board:setVisited(self.x, self.y, false)
+    
+    self:move(self.backtrackMoves[self.movesMade]["tile"], true)
+    self:removePath()
+    
+    self.backtrackMoves[self.movesMade] = nil
+    self.movesMade = self.movesMade - 1
 end
 
 function Player.bounce(target)

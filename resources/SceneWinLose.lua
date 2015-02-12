@@ -30,8 +30,6 @@ function sceneWinLose:setUp(event)
     self.title = director:createSprite({x=appWidth/2, y=390, xAnchor=0.5, yAnchor=0.5, source="textures/" .. title_texture})
     setDefaultSize(self.title, 220)
     self.title.alpha=0
-    
-    gameInfo.winloose = "loose"
 end
 
 function sceneWinLose:enterPostTransition(event)
@@ -107,6 +105,7 @@ function sceneWinLose.nextLevel()
 end
 
 function sceneWinLoseTouchRetry(self,event)
+    gameInfo.winLose = "lose"
     if event.phase == "ended" then
         sceneWinLose.disableMenu()
         local btnScale = sceneWinLose.btns.retry.defaultScaleX

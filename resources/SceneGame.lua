@@ -400,9 +400,10 @@ function sceneGame:touch(event)
                     dbg.print("Has tile: check player(" .. player.id .. ") phase=" .. player.phase)
                     if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
                         dbg.print("CAN TAKE TILE")
-                        player.phase = "changingTilePos" --TODO: not using this yet. will check animating/moving
+                        
                         dbg.print("moving tile, player(" .. player.id .. ") setting phase=" .. player.phase)
                         finger.phase = "placingTile"
+                        
                         if not gotTile then
                             gotTile = board:getAndRemoveTile(xGrid, yGrid, true)
                             finger.reservedTile = {x=xGrid,y=yGrid}
@@ -410,11 +411,18 @@ function sceneGame:touch(event)
                             finger.startX = x
                             finger.startY = y
                             gotTile:bringToFront()
-                            
-                            
-                            --TODO: setFade false on tile, cancel player overlap flag if needed.
-                            -- also need to check fad is applied again on returning to original spot...
                         end
+                        
+                        if xGrid == player.x and yGrid == player.y then
+                            --tile was under a player
+                            dbg.print("!!!! got a player tile")
+                            finger.dragTile.playerTileWasFrom = player
+                            player.phase = "willBacktrack"
+                            --TODO: animate tile removal nicely.....
+                        else
+                            player.phase = "changingTilePos"
+                        end
+                        
                         if not finger.dragTile.players then finger.dragTile.players={} end
                         finger.dragTile.players[player.id] = player
                     end
@@ -433,30 +441,17 @@ function sceneGame:touch(event)
             
             -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
             local rotated = false
-            if math.abs(finger.startX - x) < tapThreshold and math.abs(finger.startY - y) < tapThreshold then
+            if (board.canRotatePlayerTiles or not finger.dragTile.playerTileWasFrom) and
+                    math.abs(finger.startX - x) < tapThreshold and math.abs(finger.startY - y) < tapThreshold then
                 rotated = finger.dragTile:rotateRight()
                 -- we still carry on after this so that player can try to move, tile repositions, flags reset
             end
             
-            local tilePlacedNearPlayers, tileWasFromQueue
-                    = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile, rotated))
-            -- tilePlacedNearPlayers = false: tile not placed so return it.
-            -- tilePlacedNearPlayers = list: tile was moved and this is a list of players the tile is now next to
+            --TODO: if we allow board.canRotatePlayerTiles, prob need logic to update next move dirs for player
             
-            if tilePlacedNearPlayers then
-                for k,player in pairs(tilePlacedNearPlayers) do
-                    player.phase = "waitingForMove"
-                    dbg.print("added tile to board: near player(" .. player.id ..") setting player phase=" .. player.phase)
-                end
-            else
-                if finger.dragTile.players then
-                    for k,player in pairs(finger.dragTile.players) do
-                        player.phase = "ready"
-                        finger.dragTile.players[player.id] = nil
-                        dbg.print("NOT added to board (from queue): player(" .. player.id ..") setting phase=" .. player.phase)
-                    end
-                end
-            end
+            local tileWasFromQueue = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile, rotated))
+            -- This triggers any player updates and animations. And sets or resets player.phase for each player
+            -- that was in finger.dragTile.players
             
             if finger.reservedTile then
                 board:freeUpTile(finger.reservedTile)

@@ -43,7 +43,7 @@ gameInfo = {}
 gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
-gameInfo.winloose = "loose"
+gameInfo.winLose = "lose"
 gameInfo.levelTime = 60
 
 tapThreshold = 5 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels

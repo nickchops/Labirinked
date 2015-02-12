@@ -79,6 +79,8 @@ deployments
     #icon="deploy-assets/tile-bridge.png"
     splashscreen="deploy-assets/splash.jpg"
 
+    app-icf="resources/app.icf,resources-deploy/deploy.icf"
+    
     ["Windows"]
     win32
     arch=x86

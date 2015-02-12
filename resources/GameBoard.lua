@@ -31,6 +31,10 @@ function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debu
     self.startHeight = self.tileWidth * self.tilesHigh
     self.origin = director:createNode({x=appWidth/2 - self.startWidth/2,
             y= menuHeight + (appHeight-menuHeight)/2 - self.startHeight/2})
+    
+    self.canRotatePlayerTiles = false
+    --allow rotation of tile underneath a player. Can create broken paths but might be nice mechanic...
+    
     self.menuHeight = menuHeight
     
     self.debugDraw = debugDraw
@@ -63,10 +67,10 @@ function GameBoard:addTile(x,y,tile)
     self:setDepth(tile)
 end
 
-function GameBoard:setVisited(x, y, checkAndHideForegroundTile, animateHide)
-    self.boardVisited[y*self.maxTilesWide+x] = true
+function GameBoard:setVisited(x, y, visited, checkAndHideForegroundTile, animateHide)
+    self.boardVisited[y*self.maxTilesWide+x] = visited
     
-    if checkAndHideForegroundTile then
+    if visited and checkAndHideForegroundTile then
         return self:checkAndHideTile(x, y-1, animateHide)
     end
 end
@@ -77,7 +81,7 @@ function GameBoard:checkAndHideTile(x, y, animate)
     
     if tile and tile:getCenterHeight() > self:getTile(x,y+1):getHeight() then
         dbg.print("hiding tile!")
-        tile:setFade(true, true)
+        tile:setFade(true, animate)
         return tile -- returns a tile if it hides the tile
     end
 end
@@ -93,7 +97,7 @@ function GameBoard:hideTileIfOverPlayer(tile, animate)
     for k,player in pairs(players) do
         if player.x == tile.gridX and player.y == tile.gridY+1 and height > self:getTile(player.x,player.y):getHeight() then
             foundPlayer = true
-            tile:setFade(true, true)
+            tile:setFade(true, animate)
             tile.overlaps = player
             player.overlapTile = tile
             return
@@ -156,13 +160,14 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid, returningTileIsVal
     
     local nearPlayers = nil
     if tileToCheckIsValid then
-        --if near both players, returns first found
-        if tileToCheckIsValid.gridX then
+        if tileToCheckIsValid.gridX then --just some debugging!
             dbg.print("checking isValidMove for tile: x.y=" .. tileToCheckIsValid.gridX .. "," .. tileToCheckIsValid.gridY)
             if returningTileIsValid then
                 dbg.print("returningTileIsValid")
             end
         end
+        
+        --if near both players, returns first found
         nearPlayers = self:isValidMove(x, y, tileToCheckIsValid, returningTileIsValid)
         if not nearPlayers then
             dbg.print("move not valid!")
@@ -219,6 +224,8 @@ function GameBoard:isValidMove(x, y, tile, returningTileIsValid)
     -- -> putting rotated tile back where it came from on board.
     
     if not reCheckRotatedTile and self:hasTile(x,y,true) then
+        --NB: hasTile is false if tile is currently being dragged from the position
+        --(cant put new tile where old tile was until old tile is placed somewhere new)
         return false
     end 
     
@@ -246,8 +253,22 @@ function GameBoard:isAdjacentToPlayers(x, y, playerSquareInvalid)
 end
 
 function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
+    -- can take player square if player can backtrack and has made some moves
+    
+    if player.phase == "willBacktrack" then
+        return false -- cant place tile near 
+    end
+    
     if playerSquareInvalid and player.x == x and player.y == y then
-        return false
+        dbg.print("CHECKING PLAYER TILE")
+        if type(playerSquareInvalid) == "boolean" then
+            return false
+        elseif playerSquareInvalid == "checkBacktrack" and (not player.canBacktrack or player.movesMade == 0) then
+            dbg.print("moves: " .. player.movesMade)
+            dbg.print("can back track: " .. tostring(player.canBacktrack))
+            dbg.print("PLAYER CANT BACKTRACK")
+            return false
+        end
     end
     
     if player.phase == "waitingForMove" then
@@ -265,12 +286,21 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
 end
 
 function GameBoard:canTakeTile(x, y, player)
-    if self:isVisited(x,y) then return false end
+    if self:isVisited(x,y) and not (player.x == x and player.y == y) then
+        if self:isVisited(x,y) then
+            dbg.print("TILE VISITED checking player: " .. player.id .. " at pos " .. x .. "," .. y)
+        else
+            dbg.print("ON SAME SQAURE checking player: " .. player.id .. " at pos " .. x .. "," .. y)
+        end
+        return false
+    end
+    
+    dbg.print("TILE not VISITED checking player: " .. player.id .. " at pos " .. x .. "," .. y)
     
     if player then
-        return self:isAdjacentToPlayer(x, y, player, true)
+        return self:isAdjacentToPlayer(x, y, player, "checkBacktrack")
     else
-        return self:isAdjacentToPlayers(x, y, true)
+        return self:isAdjacentToPlayers(x, y, "checkBacktrack")
     end
 end
 

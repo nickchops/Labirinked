@@ -89,6 +89,8 @@ function Tile:init(x, y, tileType, rotation, tileWidth)
     self.y = y
     self.posOffset = tileWidth/2
     
+    self.players = {} --for tracking players the tile was previously near
+    
     self.origin = director:createNode({x=self.x, y=self.y})
     self:createSprite(0)
     
@@ -262,11 +264,6 @@ function tilePlaced(target)
     local tile = target.tile
     if not tile.startSlot then
         board:addTile(tile.gridX, tile.gridY, tile)
-    
-        if tile.gridX==1 and tile.gridY==0 then
-            dbg.print("------------------------")
-            dbg.print("TILE LAID FOR FINAL MOVE")
-        end
             
         if target.players then
             for k,player in pairs(target.players) do
@@ -283,7 +280,16 @@ end
 function Tile:setGridTarget(gridX, gridY, nearPlayers)
     self.origin.tile = self
     self.origin.players = nearPlayers
+    
+    -- these are players we *were* next to. Reset for next time. Player phases set to
+    -- ready, but this will be overriden below for any players that need to animate.
+    for k,player in pairs(self.players) do
+        player.phase = "ready"
+    end
+    self.players = {}
+    
     dbg.print("setGridTarget: x,y=" .. gridX .. "," .. gridY)
+    
     if gridX < 0 or gridY < 0 then
         if self.startSlot then
             --back to slot
@@ -298,7 +304,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
             tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
             board:hideTileIfOverPlayer(self, true)
         end
-        return false, false
+        return false
     else
         dbg.print("target is on grid")
         --to new grid position
@@ -308,13 +314,27 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
         tween:to(self.origin, {x=self.x, y=self.y, time=0.2, onComplete=tilePlaced})
         board:hideTileIfOverPlayer(self, true)
         
+        for k,player in pairs(nearPlayers) do
+            player.phase = "waitingForMove"
+            dbg.print("added tile to board: near player(" .. player.id ..") setting player phase=" .. player.phase)
+        end
+        
         if self.startSlot then
             dbg.print("got a start slot")
             local oldSlot = self.startSlot
             self.startSlot = nil
-            return nearPlayers or true, oldSlot
-        else
-            return nearPlayers or true, false
+            return oldSlot
+        else            
+            if self.playerTileWasFrom then
+                dbg.print("TILE! tile being positioned was a player tile")
+                -- In this sitution, playerTileWasFrom should always be the other player whose tile nearPlayers stole
+                self.playerTileWasFrom.phase = "backtracking"
+                self.playerTileWasFrom:backtrack()
+            else
+                dbg.print("NO TILE FROM PLAYER")
+            end
+            
+            return false
         end
     end
 end
