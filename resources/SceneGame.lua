@@ -308,7 +308,7 @@ function sceneGame:pausePlay()
     --todo: pause drag events if needed
     system:removeEventListener("touch", self)
     backButtonHelper:disable()
-    sceneGame.disableButtons()
+    
     self.levelTimer:cancel()
     self.levelTimer = nil
     if self.tileQueueTimers then
@@ -359,11 +359,6 @@ end
 function sceneGame:touch(event)
     --if event.id > 1 then return end --lock to single touch for testing
     if event.id > 2 then return end
-    
-    --TODO: issue with multitouch: can place a tile while another tile is dragged off the
-    --target position. Will then end up with two tiles if original tile
-    --is released and goes back to old place
-    --Should lock the position while a tile is being dragged from it
     
     local x = vr:getUserX(event.x)
     local y = vr:getUserY(event.y)
@@ -433,11 +428,7 @@ function sceneGame:touch(event)
         if event.phase == "moved" then
             finger.dragTile:setPosCentered(x,y)
         elseif event.phase == "ended" then
-            if finger.dragTile.finger then
-                print("TOUCH END tile has finger: " .. finger.dragTile.finger.id)
-            else
-                print("TOUCH END tile has no finger - should be releasing a grid tile") --TODO check this!!
-            end
+            print("TOUCH END")
             
             -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
             local rotated = false
@@ -488,59 +479,6 @@ function restartGame(event)
     --sceneGame.label = nil
     sceneGame:startPlay()
     --sceneGame.score = 0
-end
-
-
---- coin buttons
-
-function sceneGame:addButton(name, text, x, y, width, touchListener, textX, btnColor)
-    local btn = director:createSprite({x=x, y=y, xAnchor=0.5, yAnchor=0.5, source=btnTextureShort, color=btnColor})
-    
-    if not self.btns then
-        self.btns = {}
-    end
-    self.btns[name] = btn
-    
-    btn.btnScale = width/btn.w
-
-    btn.xScale = btn.btnScale
-    btn.yScale = btn.btnScale
-    btn.defaultScale = btn.btnScale
-    
-    --btn.x = btn.x+btn.w/2
-    --btn.y = btn.y+btn.h/2
-    
-    sceneGame:addChild(btn)
-    btn.label = director:createLabel({x=-width+textX, y=10, w=btn.w, h=btn.h, hAlignment="center", vAlignment="bottom", text=text, color=color.white, font=fontMain, xScale=2, yScale=2})
-    btn:addChild(btn.label)
-
-    btn.touch = touchListener
-    return btn
-end
-
-function sceneGame.enableButtons()
-    for k,v in pairs(sceneGame.btns) do
-        v:addEventListener("touch", v)
-        v.color=color.red
-    end
-end
-
-function sceneGame.disableButtons()
-    if sceneGame.btns then
-        for k,v in pairs(sceneGame.btns) do
-            v:removeEventListener("touch", v)
-            v.color={100,0,0}
-        end
-    end
-end
-
-function sceneGame.touchButton1(self, event)
-    if event.phase == "ended" then
-        --do logic
-        
-        tween:to(self, {xScale=self.btnScale*0.9, yScale=self.btnScale*0.9, time=0.1})
-        tween:to(self, {xScale=self.btnScale, yScale=self.btnScale, time=0.1, delay=0.1, onComplete=nil}) --TODO: set on complete!
-    end
 end
 
 ---- Pause/resume logic/anims on app suspend/resume ---------------------------

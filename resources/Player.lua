@@ -72,7 +72,7 @@ function Player:tryToMove()
     
     -- possibleMoves is directions can move on current tile
     -- doesn't include direction player came from
-    local moves = self.possibleMoves --[self.moveStackSize]
+    local moves = self.possibleMoves
     local moveCount
     local moveList
     
@@ -145,7 +145,7 @@ function Player:tryToMove()
         end
     end
     
-    --pick tile at random. TODO: prob needs pathfinding or at least
+    --pick tile at random. TODO: also have manual levels. Maybe check random level is complete-able!
     -- we have our move now.
     local move = moveList[math.random(1, moveCount)]
     local tile = move.tile
