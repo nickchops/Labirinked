@@ -45,6 +45,21 @@ gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winLose = "lose"
 gameInfo.levelTime = 60
+gameInfo.level = 1
+gameInfo.levels = {
+    {tileTypes = {"floor"}, time = 60},
+    {tileTypes = {"floor", "corner", "road"}, time = 60},
+    {tileTypes = {"floor", "corner", "road", "threeway"}, time = 40},
+    {tileTypes = {"floor", "corner", "road", "threeway", "blocker"}, time = 40},
+    {tileTypes = {"corner", "road", "bridge", "blocker"}, time = 50},
+    {tileTypes = {"corner", "road", "bridge", "blocker", "extratime"}, time = 30},
+    {tileTypes = {"floor", "corner", "road", "bridge", "blocker", "extratime", "stairAscend"}, time = 60},
+    {tileTypes = {"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised"}, time = 60},
+    {tileTypes = {"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised", "roadRaised"}, time = 60},
+    {tileTypes = {"corner", "road", "extratime", "stairAscend", "roadRaised"}, time = 60}
+}
+
+gameInfo.maxLevel = table.getn(gameInfo.levels)
 
 tapThreshold = 5 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
 

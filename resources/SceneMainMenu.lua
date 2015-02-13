@@ -226,6 +226,7 @@ end
 
 function sceneMainMenu.startGame()
     --director:moveToScene(sceneWinLose, {transitionType="slideInR", transitionTime=0.8}) --for testing
+    gameInfo.level = 1
     director:moveToScene(sceneGame, {transitionType="slideInR", transitionTime=0.8})
     --audio:stopStream()
 end

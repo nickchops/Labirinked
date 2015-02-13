@@ -32,7 +32,9 @@ function sceneGame:setUp(event)
     --btnA = OnScreenButton.Create({x=80, y=appWidth-100, radius=15, topColor=color.red, baseColor=color.darkRed, scale3d=5, depth3d=5})
     --btnB = OnScreenButton.Create({x=30, y=appWidth-100, radius=15, topColor=color.green, baseColor=color.darkGreen, scale3d=5, depth3d=5})
     
-    self:generateQueueOfTiles(10, Tile.tileTypes)
+    self:generateQueueOfTiles(10, debugTileTypes or gameInfo.levels[gameInfo.level].tileTypes)
+    
+    gameInfo.levelTime = gameInfo.levels[gameInfo.level].time
 
     tileSlots = {} -- tiles at bottom of screen
     tileSlotsMax = 4
@@ -74,6 +76,8 @@ function sceneGame:setUp(event)
     player2:setPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
+    
+    gameInfo.winLose = "lose"
     
     -- set some tiles to play with to start
 end

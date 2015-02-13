@@ -42,9 +42,9 @@ function sceneWinLose.activateButtons()
 
     sceneWinLose:addButton("menu", "image", "menu_button.png", 0, 0, 180, sceneWinLoseTouchMenu)
     if gameInfo.winLose == "win" then
-        sceneWinLose:addButton("retry", "image", "next_level.png", 0, -440, 160, sceneWinLoseTouchRetry)
+        sceneWinLose:addButton("goToGame", "image", "next_level.png", 0, -440, 160, sceneWinLoseTouchNextLevel)
     else
-        sceneWinLose:addButton("retry", "image", "retry.png", 0, -440, 80, sceneWinLoseTouchRetry)
+        sceneWinLose:addButton("goToGame", "image", "retry.png", 0, -440, 80, sceneWinLoseTouchRetry)
     end
     
     sceneWinLose.enableMenu()
@@ -95,32 +95,30 @@ function sceneWinLose.gotoMenu()
     director:moveToScene(sceneMainMenu, {transitionType="slideInL", transitionTime=0.8})
 end
 
-
-function sceneWinLoseTouchNextLevel(self,event)
-    
+function sceneWinLose.goToGame1()
+    sceneWinLose.disableMenu()
+    local btnScale = sceneWinLose.btns.goToGame.defaultScaleX
+    tween:to(sceneWinLose.btns.goToGame, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
+    tween:to(sceneWinLose.btns.goToGame, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=sceneWinLose.goToGame2})
 end
 
-function sceneWinLose.nextLevel()
-    --Not implemented!
-end
-
-function sceneWinLoseTouchRetry(self,event)
-    gameInfo.winLose = "lose"
-    if event.phase == "ended" then
-        sceneWinLose.disableMenu()
-        local btnScale = sceneWinLose.btns.retry.defaultScaleX
-        tween:to(sceneWinLose.btns.retry, {xScale=btnScale*0.8, yScale=btnScale*0.8, time=0.2})
-        tween:to(sceneWinLose.btns.retry, {xScale=btnScale, yScale=btnScale, time=0.2, delay=0.2, onComplete=sceneWinLose.retry})
-    end
-end
-
-function sceneWinLose.retry()
+function sceneWinLose.goToGame2()
     pauseNodesInTree(sceneWinLose)
     director:moveToScene(sceneGame, {transitionType="slideInR", transitionTime=0.8})
 end
 
+function sceneWinLoseTouchNextLevel(self,event)
+    gameInfo.level = math.min(gameInfo.level + 1, gameInfo.maxLevel)
+    if event.phase == "ended" then
+        sceneWinLose.goToGame1()
+    end
+end
 
-
+function sceneWinLoseTouchRetry(self,event)
+    if event.phase == "ended" then
+        sceneWinLose.goToGame1()
+    end
+end
 
 function sceneWinLose:exitPreTransition(event)
     system:removeEventListener({"suspend", "resume", "update"}, self)
