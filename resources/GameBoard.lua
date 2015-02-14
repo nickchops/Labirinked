@@ -8,34 +8,36 @@
 GameBoard = inheritsFrom(baseClass)
 
 --tilesWide etc are how many tiles wide the widthOnScreen are is
---maxTiles is max gameboard size (extenidng off the screen edges)
---menuHeight is distance form bottom where menu area for grabbing tiles, pause, etc lives
+--maxTiles is max gameboard size (extending off the screen edges)
+--menuHeight is distance from bottom where menu area for grabbing tiles, pause, etc lives
+--menuHeight is *in tiles* not pixels!
 --board will be centered on the screen in the area left after that
---tiles high is however many can live in the space left!
-
---todo: prob should have fixed sizes/levels :p
-
 -- grid positions start at 0,0
-function GameBoard:init(widthOnScreen, tilesWide, maxTilesWide, menuHeight, debugDraw)
+
+function GameBoard:init(maxWidthOnScreen, tilesWide, maxHeightOnScreen, tilesHigh, maxTilesWide, menuHeight, debugDraw)
     self.board = {}
     self.boardVisited = {}
     self.boardReserved = {}
-    self.widthOnScreen = widthOnScreen
-    self.startWidth = widthOnScreen
-    self.tileWidth = widthOnScreen/tilesWide
-    self.halfTile = self.tileWidth/2
     self.tilesWide = tilesWide
-    self.tilesHigh = math.floor((appHeight-menuHeight)/self.tileWidth) -1 --allow some padding
-    self.heightOnScreen = self.tilesHigh * self.tileWidth
+    self.tilesHigh = tilesHigh
     self.maxTilesWide = maxTilesWide
+    
+    --get smallest tiles to fit both dimensions plus allow for menu/slots area
+    self.tileWidth = math.min(maxWidthOnScreen/tilesWide, maxHeightOnScreen/(tilesHigh+menuHeight))
+    self.halfTile = self.tileWidth/2
+    self.menuHeight = menuHeight*self.tileWidth
+    
+    self.widthOnScreen = self.tilesWide * self.tileWidth
+    self.heightOnScreen = self.tilesHigh * self.tileWidth
+    self.startWidth = self.widthOnScreen
+    self.startHeight = self.heightOnScreen
+    
     self.startHeight = self.tileWidth * self.tilesHigh
     self.origin = director:createNode({x=appWidth/2 - self.startWidth/2,
-            y= menuHeight + (appHeight-menuHeight)/2 - self.startHeight/2})
+            y = self.menuHeight + (appHeight-self.menuHeight)/2 - self.startHeight/2})
     
     self.canRotatePlayerTiles = false
-    --allow rotation of tile underneath a player. Can create broken paths but might be nice mechanic...
-    
-    self.menuHeight = menuHeight
+    --true=allow rotation of tile underneath a player. Can create broken paths but might be nice mechanic...
     
     self.debugDraw = debugDraw
     if debugDraw then

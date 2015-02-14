@@ -262,6 +262,8 @@ end
 
 function tilePlaced(target)
     local tile = target.tile
+    tile.finger = nil --allow a finger to pick it up again
+    
     if not tile.startSlot then
         board:addTile(tile.gridX, tile.gridY, tile)
             

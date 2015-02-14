@@ -108,8 +108,8 @@ function sceneWinLose.goToGame2()
 end
 
 function sceneWinLoseTouchNextLevel(self,event)
-    gameInfo.level = math.min(gameInfo.level + 1, gameInfo.maxLevel)
     if event.phase == "ended" then
+        gameInfo.level = math.min(gameInfo.level + 1, gameInfo.maxLevel)
         sceneWinLose.goToGame1()
     end
 end

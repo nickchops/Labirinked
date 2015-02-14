@@ -10,10 +10,6 @@ dofile("GameBoard.lua")
 sceneGame = director:createScene()
 sceneGame.name = "game"
 
-menuHeight = 130
---tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
-tilesWide = debugTilesWide or 12
-
 function sceneGame:setUp(event)
     updateVirtualResolution(self)
     
@@ -33,18 +29,30 @@ function sceneGame:setUp(event)
     --btnB = OnScreenButton.Create({x=30, y=appWidth-100, radius=15, topColor=color.green, baseColor=color.darkGreen, scale3d=5, depth3d=5})
     
     self:generateQueueOfTiles(10, debugTileTypes or gameInfo.levels[gameInfo.level].tileTypes)
-    
+    print("!!!!!!!!!!!!!!!!!!!!!!!! " .. gameInfo.level .. "!!!!!!!!!!!!")
     gameInfo.levelTime = gameInfo.levels[gameInfo.level].time
+    
+    local tilesWide = debugTilesWide or gameInfo.levels[gameInfo.level].width
+    local tilesHigh = gameInfo.levels[gameInfo.level].height
+    
+    local padAdjust
+    if tilesHigh < 5 then
+        padAdjust = 0.75
+    elseif tilesHigh < 6 then
+        padAdjust = 0.8
+    else
+        padAdjust = 0.9
+    end
 
+    board = GameBoard:create()
+    board:init(appWidth*padAdjust, tilesWide, appHeight*padAdjust, tilesHigh, 30, 1.8, debugOn)
+    
+    
     tileSlots = {} -- tiles at bottom of screen
     tileSlotsMax = 4
     tileSlotsSize = 0
-    tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
-    
+    tileSlotsY = (board.menuHeight/3+10) + vr.userWinMinY/2
     tileXSpace = 20
-
-    board = GameBoard:create()
-    board:init(900, tilesWide, 30, menuHeight, debugOn)
     
     player1 = Player:create()
     player2 = Player:create()
@@ -78,6 +86,7 @@ function sceneGame:setUp(event)
     self.startTile2.sprite.alpha = 0
     
     gameInfo.winLose = "lose"
+    self.timeUp = false
     
     -- set some tiles to play with to start
 end
@@ -177,6 +186,12 @@ function sceneGame:tileSlotsFadeOut(onComplete, duration)
         --dbg.print("fadeout queue: slot=" .. k .. " xy=" .. tile.startX .. "," .. tile.startY .. " " .. tile.tileType)
         tween:to(tile.sprite, {alpha=0, time=duration})
     end
+    
+    for k,finger in pairs(fingers) do
+        if finger.dragTile then
+            tween:to(finger.dragTile.sprite, {alpha=0, time=duration})
+        end
+    end
 end
 
 function activateTile(target)
@@ -213,7 +228,7 @@ end
 function sceneGame:orientation(event)
     updateVirtualResolution(self)
     
-    tileSlotsY = (menuHeight/3+10) + vr.userWinMinY/2
+    tileSlotsY = (board.menuHeight/3+10) + vr.userWinMinY/2
     
     for i=1,tileSlotsMax do
         if tileSlots[i] then
@@ -253,10 +268,10 @@ function sceneGame.showPieces()
     
     self.levelTimerNode = director:createNode({x=appWidth/2, y=tileSlotsY})
     self.levelTimerNode.label = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
-            xScale=1.5, yScale=1.5})
+            xScale=1, yScale=1, font=fontTimer})
     self.levelTimerNode:addChild(self.levelTimerNode.label)
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.levelTime)
-    tween:to(self.levelTimerNode, {xScale=1, yScale=1, time=0.9})
+    tween:to(self.levelTimerNode, {xScale=0.8, yScale=0.8, time=0.9})
     gameInfo.timeLeft = gameInfo.levelTime
     
     --softPad:activate()
@@ -272,8 +287,8 @@ function sceneGame.levelTimerFunc(event)
     
     gameInfo.timeLeft = gameInfo.timeLeft - 1
     event.target.label.text = gameInfo.timeLeft
-    event.target.xScale = 1.5
-    event.target.yScale = 1.5
+    event.target.xScale = 1.2
+    event.target.yScale = 1.2
     
     if gameInfo.timeLeft == 9 then
         event.target.label.x = event.target.label.x/2
@@ -282,10 +297,11 @@ function sceneGame.levelTimerFunc(event)
     if gameInfo.timeLeft <= 0 then
         dbg.print("time up, pausing play")
         sceneGame:pausePlay()
+        self.timeUp = true
         board:fadeOut(sceneGame.gotoWinLose, 5)
         sceneGame:tileSlotsFadeOut(3)
     else
-        tween:to(event.target, {xScale=1, yScale=1, time=0.9})
+        tween:to(event.target, {xScale=0.8, yScale=0.8, time=0.9})
     end
 end
 
@@ -301,10 +317,10 @@ function sceneGame:incrementTimer(time)
     end
     
     gameInfo.timeLeft = time
-    self.levelTimerNode.xScale = 2
-    self.levelTimerNode.yScale = 2
+    self.levelTimerNode.xScale = 1.6
+    self.levelTimerNode.yScale = 1.6
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.timeLeft)
-    tween:to(self.levelTimerNode, {xScale=1, yScale=1, time=0.9})
+    tween:to(self.levelTimerNode, {xScale=0.8, yScale=0.8, time=0.9})
 end
 
 function sceneGame:pausePlay()
@@ -313,8 +329,10 @@ function sceneGame:pausePlay()
     system:removeEventListener("touch", self)
     backButtonHelper:disable()
     
-    self.levelTimer:cancel()
-    self.levelTimer = nil
+    if self.levelTimer then --could hit zero just as we pause
+        self.levelTimer:cancel()
+        self.levelTimer = nil
+    end
     if self.tileQueueTimers then
         for k,timer in pairs(self.tileQueueTimers) do
             timer:cancel()
@@ -339,11 +357,16 @@ function sceneGame.gotoWinLose()
 end
 
 function sceneGame:levelCleared()
+    if self.timeUp then -- time up first = failed
+        return false
+    end
+    
     dbg.print("level cleared, pausing play")
     sceneGame:pausePlay()
     gameInfo.winLose = "win"
     board:fadeOut(sceneGame.gotoWinLose, 7)
     self:tileSlotsFadeOut(3)
+    return true
 end
 
 -----------------------------------------------------------------
@@ -370,7 +393,7 @@ function sceneGame:touch(event)
     local finger = fingers[event.id]
     
     if event.phase == "began" and finger.phase == "ready" then
-        if y < menuHeight then
+        if y < board.menuHeight then
             for k,tile in pairs(tileSlots) do
                 if (not tile.finger) and tile.available and
                         x > tile.startX-board.tileWidth/2 and x < tile.startX+board.tileWidth/2 then
@@ -429,22 +452,28 @@ function sceneGame:touch(event)
             end
         end
     elseif finger.phase == "placingTile" then
+        local yShow = y
+        local tap = true
+        if math.abs(finger.startX - x) > tapThreshold or math.abs(finger.startY - y) > tapThreshold then
+            yShow = yShow + board.tileWidth*1.3 --move tile up above finger so we can see it.
+            tap = false
+        end
+        
         if event.phase == "moved" then
-            finger.dragTile:setPosCentered(x,y)
+            finger.dragTile:setPosCentered(x,yShow)
         elseif event.phase == "ended" then
             print("TOUCH END")
             
             -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
             local rotated = false
-            if (board.canRotatePlayerTiles or not finger.dragTile.playerTileWasFrom) and
-                    math.abs(finger.startX - x) < tapThreshold and math.abs(finger.startY - y) < tapThreshold then
+            if (board.canRotatePlayerTiles or not finger.dragTile.playerTileWasFrom) and tap then
                 rotated = finger.dragTile:rotateRight()
                 -- we still carry on after this so that player can try to move, tile repositions, flags reset
             end
             
             --TODO: if we allow board.canRotatePlayerTiles, prob need logic to update next move dirs for player
             
-            local tileWasFromQueue = finger.dragTile:setGridTarget(board:getNearestGridPos(x,y, finger.dragTile, rotated))
+            local tileWasFromQueue = finger.dragTile:setGridTarget(board:getNearestGridPos(x,yShow, finger.dragTile, rotated))
             -- This triggers any player updates and animations. And sets or resets player.phase for each player
             -- that was in finger.dragTile.players
             
@@ -455,7 +484,7 @@ function sceneGame:touch(event)
             
             print("TOUCH END resetting finger " .. finger.id)
             finger.phase = "ready"
-            finger.dragTile.finger = nil
+            --finger.dragTile.finger = nil
             finger.dragTile = nil
             
             if tileWasFromQueue then --if added a tile from the queue (not dragged from other spot on board) -> new tile

@@ -99,7 +99,9 @@ function Player:tryToMove()
         
         dbg.print("LEVEL COMPLETE! animating out...")
         -- stop play, move players towards eachother, sceneGame will take care of ending the level
-        sceneGame:levelCleared()
+        if not sceneGame:levelCleared() then
+            return false -- time already ran out
+        end
         self.phase="levelComplete"
         self.otherPlayer.phase="levelComplete"
         

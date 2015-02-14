@@ -26,6 +26,7 @@ appHeight = 768
 
 fontMain = "fonts/Default.fnt"
 fontMainTitle = "fonts/Default.fnt"
+fontTimer = "fonts/Segoe40pxNumbers.fnt"
 
 textCol = color.black
 goldColor = {231,215,99}
@@ -47,21 +48,25 @@ gameInfo.winLose = "lose"
 gameInfo.levelTime = 60
 gameInfo.level = 1
 gameInfo.levels = {
-    {tileTypes = {"floor"}, time = 60},
-    {tileTypes = {"floor", "corner", "road"}, time = 60},
-    {tileTypes = {"floor", "corner", "road", "threeway"}, time = 40},
-    {tileTypes = {"floor", "corner", "road", "threeway", "blocker"}, time = 40},
-    {tileTypes = {"corner", "road", "bridge", "blocker"}, time = 50},
-    {tileTypes = {"corner", "road", "bridge", "blocker", "extratime"}, time = 30},
-    {tileTypes = {"floor", "corner", "road", "bridge", "blocker", "extratime", "stairAscend"}, time = 60},
-    {tileTypes = {"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised"}, time = 60},
-    {tileTypes = {"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised", "roadRaised"}, time = 60},
-    {tileTypes = {"corner", "road", "extratime", "stairAscend", "roadRaised"}, time = 60}
+    {tileTypes={"floor"}, time=60, width=6, height=3},
+    {tileTypes={"floor", "corner", "road"}, time=40, width=6, height=4},
+    {tileTypes={"floor", "corner", "road", "threeway"}, time=40, width=6, height=4},
+    {tileTypes={"floor", "corner", "road", "threeway", "blocker"}, time=40, width=7, height=4},
+    {tileTypes={"corner", "road", "bridge", "blocker"}, time=50, width=8, height=5},
+    {tileTypes={"corner", "road", "bridge", "blocker", "extratime"}, time=30, width=8, height=5},
+    {tileTypes={"floor", "corner", "road", "bridge", "blocker", "extratime", "stairAscend"}, time=60, width=9, height=6},
+    {tileTypes={"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised"}, time=60, width=9, height=6},
+    {tileTypes={"corner", "road", "threeway", "extratime", "stairAscend", "floorRaised", "roadRaised"},
+        time=60, width=11, height=6},
+    {tileTypes={"corner", "road", "extratime", "stairAscend", "roadRaised"}, time=60, width=10, height=6},
+    
+    {tileTypes={"floor", "corner", "road", "bridge", "blocker", "extratime", "stairAscend", "roadRaised"},
+        time=60, width=12, height=7}
 }
 
 gameInfo.maxLevel = table.getn(gameInfo.levels)
 
-tapThreshold = 5 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
+tapThreshold = 20 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
 
 -- name is hard coded, could be extended to some entry system or game service login
 gameInfo.scores = {}
