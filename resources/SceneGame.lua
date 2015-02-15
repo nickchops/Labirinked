@@ -56,8 +56,8 @@ function sceneGame:setUp(event)
     
     player1 = Player:create()
     player2 = Player:create()
-    player1:init(1,board,player2)
-    player2:init(2,board,player1)
+    player1:init(1,board,player2,{"down","right"})
+    player2:init(2,board,player1,{"up","left"})
     
     players = {}
     players[1] = player1
@@ -75,13 +75,11 @@ function sceneGame:setUp(event)
     
     self.startTile1 = board:addNewTileToGrid(p1StartX, p1StartY, "floor", 1)
     player1:setGridPos(p1StartX, p1StartY, true, true, true)
-    player1:setPossibleMoves({"down","right"})
     player1.sprite.alpha=0
     self.startTile1.sprite.alpha =0
     
     self.startTile2 = board:addNewTileToGrid(p2StartX, p2StartY, "floor", 1)
     player2:setGridPos(p2StartX, p2StartY, true, true, true)
-    player2:setPossibleMoves({"up","left"})
     player2.sprite.alpha=0
     self.startTile2.sprite.alpha = 0
     
@@ -297,7 +295,7 @@ function sceneGame.levelTimerFunc(event)
     if gameInfo.timeLeft <= 0 then
         dbg.print("time up, pausing play")
         sceneGame:pausePlay()
-        self.timeUp = true
+        sceneGame.timeUp = true
         board:fadeOut(sceneGame.gotoWinLose, 5)
         sceneGame:tileSlotsFadeOut(3)
     else

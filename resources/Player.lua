@@ -1,7 +1,7 @@
 
 Player = inheritsFrom(baseClass)
 
-function Player:init(playerNumber, board, otherPlayer)
+function Player:init(playerNumber, board, otherPlayer, startMoves)
     self.id = playerNumber
     self.sprite = director:createSprite({x=0, y=0, source="textures/player.png", alpha=0.7})
     setDefaultSize(self.sprite, board.tileWidth*0.5)
@@ -11,6 +11,7 @@ function Player:init(playerNumber, board, otherPlayer)
     self.phase="ready"
     self.offset = getWidth(self.sprite)/2
     self.otherPlayer = otherPlayer
+    self.startMoves = startMoves
     
     self.canBacktrack = true --allows turning off by player (not used yet)...
     self.backtrackMoves = {}
@@ -59,10 +60,6 @@ function Player:setGridPos(x,y, positionSprite, visitTile, setDepthNow)
     end
 end
 
-function Player:setPossibleMoves(moves)
-    self.possibleMoves = moves
-end
-
 function Player:tryToMove()
     dbg.print("tryToMove for " .. self.id)
     if self.otherPlayer.phase == "levelComplete" then
@@ -70,9 +67,27 @@ function Player:tryToMove()
         return false --note: return value just used for debugging
     end
     
-    -- possibleMoves is directions can move on current tile
+    -- moves is directions can move off current tile
     -- doesn't include direction player came from
-    local moves = self.possibleMoves
+    local moves
+    if self.movesMade == 0 then
+        moves = self.startMoves
+    else
+        local startTile= board:getTile(self.x, self.y)
+        local tileSides = tilePaths[startTile.tileType][tileRotations[startTile.tileType][startTile.rotation]]
+        local entryDir = self.backtrackMoves[self.movesMade].dir
+        moves = {}
+        
+        dbg.print("Exits on current square:")
+        for k,v in pairs(tileSides) do
+            dbg.print(v)
+            if v ~= entryDir then
+                table.insert(moves, v)
+            end
+        end
+        dbg.print("Moves on square (entry side removed):")
+    end
+    
     local moveCount
     local moveList
     
@@ -159,25 +174,6 @@ function Player:tryToMove()
     self.movesMade = self.movesMade + 1
     self.backtrackMoves[self.movesMade] = {dir=board:getReverse(dir), tile=board:getTile(self.x, self.y)}
     self.pathMarkers[self.movesMade] = {}
-    
-    --figure out *next* possible move once on the tile
-    local tileSides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]]
-    --local newMoves = {}
-    self.possibleMoves = {}
-    
-    dbg.print("Exits on new square:")
-    
-    for k,v in pairs(tileSides) do
-        dbg.print(v)
-        if not (v == "up" and dir == "down") and not (v == "left" and dir == "right")
-                and not (v == "down" and dir == "up") and not (v == "right" and dir == "left") then
-            --table.insert(newMoves, v)
-            table.insert(self.possibleMoves, v)
-        end
-    end
-    
-    
-    dbg.print("Moves on new square (entry side removed):")
     
     if debugOn then
         for k,v in pairs(newMoves) do
