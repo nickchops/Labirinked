@@ -14,13 +14,28 @@ director.isAlphaInherited = false
 
 pauseflag = false -- flag to prevent Quick emulating time passed for timers on resume events
 
-deviceId = device:getInfo("deviceID")
-deviceIsTouch = true
+local deviceId = device:getInfo("deviceID")
+local platform = device:getInfo("platform")
 
 -- virtual coordinates for user space
 appWidth = 1024
 appHeight = 768
 
+ppi = 216 --slightly arbitrary default!
+if not PixelDensity then --needs ppi/PixelDensity extension. allow building without it
+    dbg.assert(false, "PixelDensity module not found. rebuild quick binaries with this module!")
+else
+    ppi = PixelDensity.GetScreenPPI()
+end
+
+-- turn fullscreen on if have extension. screen size won't update till bar is gone
+if not androidFullscreen then
+    dbg.assert(false, "androidFullscreen extension not found. rebuild quick binaries with this extension!")
+else
+    if androidFullscreen.isImmersiveSupported() then
+        androidFullscreen.turnOn()
+    end
+end
 
 ---- Game globals go here for easy access --------
 
@@ -79,8 +94,6 @@ end
 ---- Platform/device/app info --------
 
 local appId = "com.mycompany.slots"
-
-local platform = device:getInfo("platform")
 
 useQuitButton = platform ~= "IPHONE"
 

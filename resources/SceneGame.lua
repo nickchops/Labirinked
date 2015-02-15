@@ -11,6 +11,12 @@ sceneGame = director:createScene()
 sceneGame.name = "game"
 
 function sceneGame:setUp(event)
+    -- force re-show fullscreen just in case. Only really care about it in the
+    -- game scene. screen will shrink and fire orientation events if it changes.
+    if androidFullscreen and androidFullscreen:isImmersiveSupported() then
+        androidFullscreen:turnOn()
+    end
+    
     updateVirtualResolution(self)
     
     system:addEventListener({"suspend", "resume", "update"}, self)
@@ -453,7 +459,8 @@ function sceneGame:touch(event)
         local yShow = y
         local tap = true
         if math.abs(finger.startX - x) > tapThreshold or math.abs(finger.startY - y) > tapThreshold then
-            yShow = yShow + board.tileWidth*1.3 --move tile up above finger so we can see it.
+            yShow = yShow + ppi*0.7/vr.scale
+            --move tile up by 0.65 inches. Needs scaling for virt res.
             tap = false
         end
         
@@ -530,8 +537,8 @@ function sceneGame:resume(event)
     dbg.print("resuming game...")
     pauseflag = true
     dbg.print("...game resumed")
-        
-    if androidFullscreen.isAvailable() and androidFullscreen.isImmersiveSupported() then
-        androidFullscreen.turnOn(true, true)
+    
+    if androidFullscreen and androidFullscreen:isImmersiveSupported() then
+        androidFullscreen:turnOn()
     end
 end
