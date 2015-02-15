@@ -324,34 +324,34 @@ function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
         end
         
         if tile then
+            local hitOtherPlayer = false
             if otherPlayer.x == tile.gridX and otherPlayer.y == tile.gridY then
-                -- -1 indicates level complete, returns just the target tile b ut not actually using that atm
-                return -1, tile
-            elseif not self:isVisited(tile.gridX, tile.gridY) then
+                hitOtherPlayer = true
+            end
+            
+            if hitOtherPlayer or not self:isVisited(tile.gridX, tile.gridY) then
                 dbg.print("get start tile height")
                 local height = startTile:getHeight(false, move)
                 
                 --get list of sides this tile has exits on
                 local entrySides = tilePaths[tile.tileType][tileRotations[tile.tileType][tile.rotation]] --eg {"down", "up"}
                 
-                --matching entry/exit sides means move is valid
-                local success = false
                 for k,dir in pairs(entrySides) do
-                    if move == "up" and dir == "down" then success = true end
-                    if move == "right" and dir == "left" then success = true end
-                    if move == "down" and dir == "up" then success = true end
-                    if move == "left" and dir == "right" then success = true end
-                    
-                    if success then
+                    if move == self.getReverse(dir) then --matching entry/exit sides means move is valid
                         dbg.print("get end tile height")
                         local newHeight = tile:getHeight(false, dir)
                         if newHeight == height then
                             dbg.print("board: found move: " .. tile.tileType .. " dir" .. move)
+                            if hitOtherPlayer then
+                                dbg.print("move hits player - will end game")
+                                -- -1 indicates level complete, returns just the target tile but not actually using that atm
+                                return -1, tile
+                            end
+                        
                             moveCount = moveCount + 1
                             table.insert(possibleMoves, {tile=tile, dir=move})
                             break
                         end
-                        success = false
                     end
                 end
             end
@@ -361,7 +361,7 @@ function GameBoard:getAvailableMoves(x, y, moves, otherPlayer)
     return moveCount, possibleMoves
 end
 
-function GameBoard:getReverse(dir)
+function GameBoard.getReverse(dir)
     if dir == "up" then return "down" end
     if dir == "down" then return "up" end
     if dir == "left" then return "right" end

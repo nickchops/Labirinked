@@ -172,7 +172,7 @@ function Player:tryToMove()
     
     -- just store directions so can move in reverse of them
     self.movesMade = self.movesMade + 1
-    self.backtrackMoves[self.movesMade] = {dir=board:getReverse(dir), tile=board:getTile(self.x, self.y)}
+    self.backtrackMoves[self.movesMade] = {dir=board.getReverse(dir), tile=board:getTile(self.x, self.y)}
     self.pathMarkers[self.movesMade] = {}
     
     if debugOn then
