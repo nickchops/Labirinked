@@ -53,6 +53,23 @@ function sceneGame:setUp(event)
     board = GameBoard:create()
     board:init(appWidth*padAdjust, tilesWide, appHeight*padAdjust, tilesHigh, 30, 1.8, debugOn)
     
+    local offset = 50
+    local border1 = director:createSprite({x=board.origin.x-offset,y=board.origin.y+board.heightOnScreen+offset,
+            source="textures/border1.png", xScale=0.5, yScale=0.5})
+    border1.y = border1.y - border1.h*0.5
+    
+    local border2 = director:createSprite({x=board.origin.x-offset,y=board.origin.y-offset,
+            source="textures/border1.png", xScale=0.5, yScale=0.5, yFlip=true})
+    
+    local border3 = director:createSprite({x=board.origin.x+board.widthOnScreen+offset,
+            y=board.origin.y+board.heightOnScreen+offset,
+            source="textures/border1.png", xScale=0.5, yScale=0.5, xFlip=true})
+    border3.y = border3.y - border3.h*0.5
+    border3.x = border3.x - border3.w*0.5
+    
+    local border4 = director:createSprite({x=board.origin.x+board.widthOnScreen+offset,y=board.origin.y-offset,
+            source="textures/border1.png", xScale=0.5, yScale=0.5, xFlip=true, yFlip=true})
+    border4.x = border4.x - border4.w*0.5
     
     tileSlots = {} -- tiles at bottom of screen
     tileSlotsMax = 4
@@ -241,6 +258,8 @@ function sceneGame:orientation(event)
         end
     end
     
+    self.levelTimerNode.y = board.menuHeight/3+10
+    
     backButtonHelper:setCenterPosition(nil, 55 + vr.userWinMinY)
 end
 
@@ -270,7 +289,7 @@ function sceneGame.showPieces()
     tween:to(player1.sprite, {alpha = 1, time=1.0, delay=1.0})
     tween:to(player2.sprite, {alpha = 1, time=1.0, delay=1.0})
     
-    self.levelTimerNode = director:createNode({x=appWidth/2, y=tileSlotsY})
+    self.levelTimerNode = director:createNode({x=appWidth/2, y=board.menuHeight/3+10})
     self.levelTimerNode.label = director:createLabel({x=-20, y=-20, color=color.black, text=gameInfo.levelTime,
             xScale=1, yScale=1, font=fontTimer})
     self.levelTimerNode:addChild(self.levelTimerNode.label)

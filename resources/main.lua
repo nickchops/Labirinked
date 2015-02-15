@@ -24,6 +24,7 @@ function updateVirtualResolution(scene)
             scene.background.y = vr.userWinMinY
         end
     end
+    tapThreshold = 0.2*ppi/vr.scale --inches for tap vs drag.
 end
 
 updateVirtualResolution(nil)

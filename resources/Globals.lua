@@ -37,6 +37,8 @@ else
     end
 end
 
+tapThreshold = 20
+
 ---- Game globals go here for easy access --------
 
 fontMain = "fonts/Default.fnt"
@@ -80,8 +82,6 @@ gameInfo.levels = {
 }
 
 gameInfo.maxLevel = table.getn(gameInfo.levels)
-
-tapThreshold = 20 --pixels for tap vs drag. TODO: should use dist via PixelDensity, not just pixels
 
 -- name is hard coded, could be extended to some entry system or game service login
 gameInfo.scores = {}
