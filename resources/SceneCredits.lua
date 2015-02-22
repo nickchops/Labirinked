@@ -1,5 +1,5 @@
 
-require("BackButton")
+require("helpers/BackButton")
 
 sceneCredits = director:createScene()
 sceneCredits.name = "credits"

@@ -2,7 +2,8 @@
 -- Debugging --
 
 --debugOn = true
---debugTileTypes = {"threeway"}-- {"floor", "stairAscend", "roadRaised"}
+--debugTileTypes = {"threeway"}
+--debugTileTypes = {"floor", "stairAscend", "roadRaised"}
 
 --require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 
@@ -62,12 +63,13 @@ gameInfo.score = 0
 gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winLose = "lose"
+gameInfo.showDragHelper = true
 gameInfo.levelTime = 60
 gameInfo.level = 1
 gameInfo.levels = {
-    {tileTypes={"floor"}, time=60, width=6, height=3},
-    {tileTypes={"floor", "corner", "road"}, time=40, width=6, height=4},
-    {tileTypes={"floor", "corner", "road", "threeway"}, time=40, width=6, height=4},
+    {tileTypes={"floor"}, time=40, width=6, height=3},
+    {tileTypes={"floor", "road"}, time=40, width=6, height=4},
+    {tileTypes={"corner", "road", "threeway"}, time=40, width=6, height=4},
     {tileTypes={"floor", "corner", "road", "threeway", "blocker"}, time=40, width=7, height=4},
     {tileTypes={"corner", "road", "bridge", "blocker"}, time=50, width=8, height=5},
     {tileTypes={"corner", "road", "bridge", "blocker", "extratime"}, time=30, width=8, height=5},

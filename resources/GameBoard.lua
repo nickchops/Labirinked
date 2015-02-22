@@ -148,7 +148,7 @@ function GameBoard:getScreenPos(x,y)
            self.origin.y + self.tileWidth*y
 end
 
-function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid, returningTileIsValid)
+function GameBoard:getNearestGridPos(x,y)
     x = math.floor((x-self.origin.x)/self.tileWidth)
     y = math.floor((y-self.origin.y)/self.tileWidth)
     
@@ -160,24 +160,7 @@ function GameBoard:getNearestGridPos(x,y, tileToCheckIsValid, returningTileIsVal
     if x > self.tilesWide-1 then x = self.tilesWide-1 end
     if y > self.tilesHigh-1 then y = self.tilesHigh-1 end
     
-    local nearPlayers = nil
-    if tileToCheckIsValid then
-        if tileToCheckIsValid.gridX then --just some debugging!
-            dbg.print("checking isValidMove for tile: x.y=" .. tileToCheckIsValid.gridX .. "," .. tileToCheckIsValid.gridY)
-            if returningTileIsValid then
-                dbg.print("returningTileIsValid")
-            end
-        end
-        
-        --if near both players, returns first found
-        nearPlayers = self:isValidMove(x, y, tileToCheckIsValid, returningTileIsValid)
-        if not nearPlayers then
-            dbg.print("move not valid!")
-            return -1,-1
-        end
-    end
-    
-    return x, y, nearPlayers
+    return x,y
 end
 
 function GameBoard:hasTile(x, y, includeReservedCells)
@@ -228,7 +211,7 @@ function GameBoard:isValidMove(x, y, tile, returningTileIsValid)
     if not reCheckRotatedTile and self:hasTile(x,y,true) then
         --NB: hasTile is false if tile is currently being dragged from the position
         --(cant put new tile where old tile was until old tile is placed somewhere new)
-        return false
+        return nil
     end 
     
     --TODO?: use player.tilesLaid to check if player can have tiles (cant be more than 1 ahead of other player)
@@ -250,7 +233,7 @@ function GameBoard:isAdjacentToPlayers(x, y, playerSquareInvalid)
     if gotPlayer then
         return nearPlayers
     else
-        return false
+        return nil
     end
 end
 
@@ -258,24 +241,24 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
     -- can take player square if player can backtrack and has made some moves
     
     if player.phase == "willBacktrack" then
-        return false -- cant place tile near 
+        return nil -- cant place tile near 
     end
     
     if playerSquareInvalid and player.x == x and player.y == y then
         dbg.print("CHECKING PLAYER TILE")
         if type(playerSquareInvalid) == "boolean" then
-            return false
+            return nil
         elseif playerSquareInvalid == "checkBacktrack" and (not player.canBacktrack or player.movesMade == 0) then
             dbg.print("moves: " .. player.movesMade)
             dbg.print("can back track: " .. tostring(player.canBacktrack))
             dbg.print("PLAYER CANT BACKTRACK")
-            return false
+            return nil
         end
     end
     
     if player.phase == "waitingForMove" then
         dbg.print("check adjacent to player " .. player.id ..": ignoring as phase is waitingForMove")
-        return false --ignore player while animating
+        return nil --ignore player while animating
     end
     
     if player.x > x-2 and player.x < x+2 and player.y == y then
@@ -283,7 +266,7 @@ function GameBoard:isAdjacentToPlayer(x, y, player, playerSquareInvalid)
     elseif player.y > y-2 and player.y < y+2 and player.x == x then
         return true
     else
-        return false
+        return nil
     end
 end
 
@@ -294,7 +277,7 @@ function GameBoard:canTakeTile(x, y, player)
         else
             dbg.print("ON SAME SQAURE checking player: " .. player.id .. " at pos " .. x .. "," .. y)
         end
-        return false
+        return nil
     end
     
     dbg.print("TILE not VISITED checking player: " .. player.id .. " at pos " .. x .. "," .. y)
@@ -375,4 +358,26 @@ function GameBoard:fadeOut(onComplete, duration)
         tween:to(tile.sprite, {alpha=0, time=duration*0.6})
     end
     system:addTimer(onComplete, duration, 1)
+end
+
+function GameBoard:showMoves(finger)
+    for y=0,self.tilesHigh-1 do
+        for x=0, self.tilesWide-1 do
+            nearPlayers = self:isValidMove(x, y, finger.dragTile)
+            if nearPlayers then
+                local xPos,yPos = self:getScreenPosCentre(x,y)
+                local target = director:createCircle({xAnchor=0.5, yAnchor=0.5, x=xPos, y=yPos, radius=0, color=finger.colour, alpha=0, strokeWidth=0, strokeAlpha=0, strokeColor=finger.colour})
+                tween:to(target, {alpha=0.3, strokeAlpha=0.25, strokeWidth=self.halfTile/5, mode="mirror", radius=self.halfTile/2, time=1})
+                table.insert(finger.targetMarkers, target)
+            end
+        end
+    end
+end
+
+function GameBoard:stopShowingMoves(finger)
+    for k,v in pairs(finger.targetMarkers) do
+        cancelTweensOnNode(v)
+        tween:to(v, {alpha=0, radius=0, alpha=0, strokeWidth=0, strokeAlpha=0, time=0.3, onComplete=destroyNode})
+    end
+    finger.targetMarkers = {}
 end

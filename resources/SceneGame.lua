@@ -1,7 +1,7 @@
 
 --dofile("helpers/OnScreenDPad.lua")
 --dofile("helpers/OnScreenButton.lua")
-require("BackButton")
+require("helpers/BackButton")
 
 dofile("Player.lua")
 dofile("Tile.lua")
@@ -30,10 +30,6 @@ function sceneGame:setUp(event)
     
     math.randomseed(os.time())
     
-    --softPad =  OnScreenDPad.Create({x=100,   y=100, baseRadius=appWidth/13, topRadius=appWidth/23})
-    --btnA = OnScreenButton.Create({x=80, y=appWidth-100, radius=15, topColor=color.red, baseColor=color.darkRed, scale3d=5, depth3d=5})
-    --btnB = OnScreenButton.Create({x=30, y=appWidth-100, radius=15, topColor=color.green, baseColor=color.darkGreen, scale3d=5, depth3d=5})
-    
     self:generateQueueOfTiles(10, debugTileTypes or gameInfo.levels[gameInfo.level].tileTypes)
     print("!!!!!!!!!!!!!!!!!!!!!!!! " .. gameInfo.level .. "!!!!!!!!!!!!")
     gameInfo.levelTime = gameInfo.levels[gameInfo.level].time
@@ -41,13 +37,15 @@ function sceneGame:setUp(event)
     local tilesWide = debugTilesWide or gameInfo.levels[gameInfo.level].width
     local tilesHigh = gameInfo.levels[gameInfo.level].height
     
+    -- always need some padding for the corner borders
+    -- good to pad the really small board a bit as well
     local padAdjust
     if tilesHigh < 5 then
-        padAdjust = 0.75
+        padAdjust = 0.7
     elseif tilesHigh < 6 then
-        padAdjust = 0.8
+        padAdjust = 0.77
     else
-        padAdjust = 0.9
+        padAdjust = 0.85
     end
 
     board = GameBoard:create()
@@ -87,9 +85,12 @@ function sceneGame:setUp(event)
     players[2] = player2
     
     --TODO: could allow as many fingers as wanted!
+    --      make a fingers class
     fingers = {}
-    fingers[1] = {id=1, phase="ready"}
-    fingers[2] = {id=2, phase="ready"}
+    fingers[1] = {id=1, phase="ready", colour={100,100,255}, targetMarkers={}}
+    fingers[2] = {id=2, phase="ready", colour={255,100,100}, targetMarkers={}}
+    maxFingers = 2
+    --add more here to enable more fingers
     
     local p1StartX = 0
     local p1StartY = board.tilesHigh-1
@@ -408,7 +409,7 @@ end
 
 function sceneGame:touch(event)
     --if event.id > 1 then return end --lock to single touch for testing
-    if event.id > 2 then return end
+    if event.id > maxFingers then return end
     
     local x = vr:getUserX(event.x)
     local y = vr:getUserY(event.y)
@@ -427,6 +428,7 @@ function sceneGame:touch(event)
                     finger.startY = y
                     tile:bringToFront()
                     print("TOUCH START SUCCESS")
+                    finger.dragTile.justPickedUp = true
                     break
                 elseif tile.finger then
                     print("TOUCH START tile still has finger already: " .. tile.finger.id)
@@ -456,6 +458,7 @@ function sceneGame:touch(event)
                             finger.startX = x
                             finger.startY = y
                             gotTile:bringToFront()
+                            finger.dragTile.justPickedUp = true
                         end
                         
                         if xGrid == player.x and yGrid == player.y then
@@ -485,8 +488,21 @@ function sceneGame:touch(event)
         
         if event.phase == "moved" then
             finger.dragTile:setPosCentered(x,yShow)
+            
+            if gameInfo.showDragHelper and finger.dragTile.justPickedUp then
+                finger.dragTile.justPickedUp = false
+                board:showMoves(finger)
+            end
+            
         elseif event.phase == "ended" then
             print("TOUCH END")
+            if gameInfo.showDragHelper then
+                board:stopShowingMoves(finger)
+                --TODO: recheck other fingers and remove/add new ones
+                --prob want to edit showMoves to update existing animations if already there
+            end
+            
+            --TODO: also use showMoves when players finish animating, i.e. whenever a player is set back to ready
             
             -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
             local rotated = false
@@ -497,9 +513,11 @@ function sceneGame:touch(event)
             
             --TODO: if we allow board.canRotatePlayerTiles, prob need logic to update next move dirs for player
             
-            local tileWasFromQueue = finger.dragTile:setGridTarget(board:getNearestGridPos(x,yShow, finger.dragTile, rotated))
-            -- This triggers any player updates and animations. And sets or resets player.phase for each player
-            -- that was in finger.dragTile.players
+            local xGrid,yGrid = board:getNearestGridPos(x,yShow)
+            local nearPlayers = board:isValidMove(xGrid, yGrid, finger.dragTile, rotated)
+            local tileWasFromQueue = finger.dragTile:setGridTarget(xGrid, yGrid, nearPlayers)
+            -- setGridTarget triggers any player updates and animations. And sets or resets
+            -- player.phase for each player that was in finger.dragTile.players
             
             if finger.reservedTile then
                 board:freeUpTile(finger.reservedTile)
@@ -508,7 +526,6 @@ function sceneGame:touch(event)
             
             print("TOUCH END resetting finger " .. finger.id)
             finger.phase = "ready"
-            --finger.dragTile.finger = nil
             finger.dragTile = nil
             
             if tileWasFromQueue then --if added a tile from the queue (not dragged from other spot on board) -> new tile

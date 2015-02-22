@@ -31,42 +31,49 @@ assets
         .
 }
 
-#assets
-#{
-#	(resources)
-#	.
-#	
-#   [common]
-#    (resources)
-#    quicklua/dbg.lua
-#   quicklua/openquick.lua
-#   quicklua/QConfig.lua
-#    
-#	config.lua
-#  fonts
-#   textures
-# sounds
-#	
-#	Utility.lua
-#   NodeUtility.lua
-#  VirtualResolution.lua
-#	Globals.lua
-#	
-#	["development"]
-#	<include common>
-#	(resources)
-#	.
-#	
-#	["distribution"] # use precompiled and concatenated files for performance
-#	<include common>
-#	(resources-ram)
-#	.
-#}
+assets
+{
+    # For debugging, include all Lua source
+	(resources)
+	.
+	
+    # Use this when using precompiled (and optionally concatenated) Lua code for performance
+	["precompiled"]
+    (resources)
+    
+    # These are engine code that's never pre-compiled,
+    # so must include source version
+    quicklua/dbg.lua
+    quicklua/openquick.lua
+    quicklua/QConfig.lua
+    
+    #edit this if you are using a custom file via [QUICK] mainFileName=
+    config.lua
+
+    # Non-code assets go here. This assumes your assets are in these folders.
+    # Add to and edit this as needed.
+    fonts
+    textures
+    sounds
+	
+    # List any of your own files that use require() rather than dofile() here.
+    # Only dofile-included code gets precompiled.
+	helpers/Utility.lua
+    helpers/NodeUtility.lua
+    helpers/VirtualResolution.lua
+	helpers/BackButton.lua
+    
+    # All pre-compiled code will have been generated in the resources-ram folder
+    # You may want to exclude any other files you generate with the simulator
+    # TODO: we should output these to resources-precompiled, not resources-ram!
+	(resources-ram)
+	.
+}
 
 subprojects
 {
     s3eAndroidFullscreen
-    #dpi/PixelDensity
+    dpi/PixelDensity
     #s3eAmazonAds
     #IwGameController
 }
