@@ -87,8 +87,9 @@ function sceneGame:setUp(event)
     --TODO: could allow as many fingers as wanted!
     --      make a fingers class
     fingers = {}
-    fingers[1] = {id=1, phase="ready", colour={100,100,255}, targetMarkers={}}
-    fingers[2] = {id=2, phase="ready", colour={255,100,100}, targetMarkers={}}
+    fingers[1] = {id=1, phase="ready", markerColor={r=100,g=100,b=255}, color={r=210,g=210,b=255}, targetMarkers={}}
+    fingers[2] = {id=2, phase="ready", markerColor={r=255,g=100,b=100}, color={r=255,g=210,b=210}, targetMarkers={}}
+    --markerColour is for target markers. Those have < 1 alpha so need to be darker/more colourful
     maxFingers = 2
     --add more here to enable more fingers
     
@@ -210,6 +211,7 @@ function sceneGame:tileSlotsFadeOut(onComplete, duration)
     end
     
     for k,finger in pairs(fingers) do
+        board:stopShowingMoves(finger)
         if finger.dragTile then
             tween:to(finger.dragTile.sprite, {alpha=0, time=duration})
         end

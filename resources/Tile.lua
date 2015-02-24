@@ -292,7 +292,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
     
     dbg.print("setGridTarget: x,y=" .. gridX .. "," .. gridY)
     
-    if gridX < 0 or gridY < 0 then
+    if not nearPlayers then
         if self.startSlot then
             --back to slot
             tween:to(self.origin, {x=self.startX, y=self.startY, time=0.2, onComplete=tilePlaced})

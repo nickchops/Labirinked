@@ -204,7 +204,12 @@ function GameBoard:freeUpTile(gridPos)
     self.boardReserved[self:getTileIndex(gridPos.x,gridPos.y)] = nil
 end
 
+--returns nil if move invalid, or a list of players next to the target square if move is valid
 function GameBoard:isValidMove(x, y, tile, returningTileIsValid)
+    if x < 0 or y < 0 or x >= self.tilesWide or y>= self.tilesHigh then
+        return nil
+    end
+    
     local reCheckRotatedTile = returningTileIsValid and tile.gridX == x and tile.gridY == y
     -- -> putting rotated tile back where it came from on board.
     
@@ -366,12 +371,14 @@ function GameBoard:showMoves(finger)
             nearPlayers = self:isValidMove(x, y, finger.dragTile)
             if nearPlayers then
                 local xPos,yPos = self:getScreenPosCentre(x,y)
-                local target = director:createCircle({xAnchor=0.5, yAnchor=0.5, x=xPos, y=yPos, radius=0, color=finger.colour, alpha=0, strokeWidth=0, strokeAlpha=0, strokeColor=finger.colour})
+                local target = director:createCircle({xAnchor=0.5, yAnchor=0.5, x=xPos, y=yPos, radius=0, color=finger.markerColor, alpha=0, strokeWidth=0, strokeAlpha=0, strokeColor=finger.markerColor})
                 tween:to(target, {alpha=0.3, strokeAlpha=0.25, strokeWidth=self.halfTile/5, mode="mirror", radius=self.halfTile/2, time=1})
                 table.insert(finger.targetMarkers, target)
             end
         end
     end
+    
+    tween:to(finger.dragTile.sprite, {color={r=finger.color.r, g=finger.color.g, b=finger.color.b}, mode="mirror", time=1})
 end
 
 function GameBoard:stopShowingMoves(finger)
@@ -380,4 +387,8 @@ function GameBoard:stopShowingMoves(finger)
         tween:to(v, {alpha=0, radius=0, alpha=0, strokeWidth=0, strokeAlpha=0, time=0.3, onComplete=destroyNode})
     end
     finger.targetMarkers = {}
+    if finger.dragTile then
+        cancelTweensOnNode(finger.dragTile.sprite)
+        tween:to(finger.dragTile.sprite, {color={r=255, g=255, b=255}, time=0.3})
+    end
 end
