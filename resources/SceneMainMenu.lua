@@ -26,7 +26,9 @@ function sceneMainMenu:startup()
         tween:to(self.backgroundLines, {alpha=1, time=2})
         tween:to(self.backgroundLogo, {alpha=1, time=2})
         
-        tween:from(self.mainMenu, {alpha=0, time=1.6, onComplete=enableMainMenu})
+        enableMainMenu()
+        
+        tween:from(self.mainMenu, {alpha=0, time=1.6})
         local delay = 0.3
         for k,v in ipairs(self.btnsOrdered) do
             tween:to(v, {alpha=1, time=0.4, delay=delay})
@@ -184,6 +186,7 @@ end
 
 function disableMainMenu(target)
     for k,v in pairs(sceneMainMenu.btns) do
+        cancelTweensOnNode(v)
         v:removeEventListener("touch", v)
     end
 end

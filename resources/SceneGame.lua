@@ -31,7 +31,7 @@ function sceneGame:setUp(event)
     math.randomseed(os.time())
     
     self:generateQueueOfTiles(10, debugTileTypes or gameInfo.levels[gameInfo.level].tileTypes)
-    print("!!!!!!!!!!!!!!!!!!!!!!!! " .. gameInfo.level .. "!!!!!!!!!!!!")
+    print("!!! Level: " .. gameInfo.level .. "!!!")
     gameInfo.levelTime = gameInfo.levels[gameInfo.level].time
     
     local tilesWide = debugTilesWide or gameInfo.levels[gameInfo.level].width
@@ -87,8 +87,8 @@ function sceneGame:setUp(event)
     --TODO: could allow as many fingers as wanted!
     --      make a fingers class
     fingers = {}
-    fingers[1] = {id=1, phase="ready", markerColor={r=100,g=100,b=255}, color={r=210,g=210,b=255}, targetMarkers={}}
-    fingers[2] = {id=2, phase="ready", markerColor={r=255,g=100,b=100}, color={r=255,g=210,b=210}, targetMarkers={}}
+    fingers[1] = {id=1, phase="ready", markerColor={r=255,g=200,b=100}, color={r=255,g=230,b=210}, targetMarkers={}}
+    fingers[2] = {id=2, phase="ready", markerColor={r=200,g=100,b=255}, color={r=230,g=210,b=255}, targetMarkers={}}
     --markerColour is for target markers. Those have < 1 alpha so need to be darker/more colourful
     maxFingers = 2
     --add more here to enable more fingers
@@ -297,7 +297,6 @@ function sceneGame.showPieces()
             xScale=1, yScale=1, font=fontTimer})
     self.levelTimerNode:addChild(self.levelTimerNode.label)
     self.levelTimer = self.levelTimerNode:addTimer(self.levelTimerFunc, 1.0, gameInfo.levelTime)
-    tween:to(self.levelTimerNode, {xScale=0.8, yScale=0.8, time=0.9})
     gameInfo.timeLeft = gameInfo.levelTime
     
     --softPad:activate()
@@ -309,7 +308,7 @@ function sceneGame.startPlay()
 end
 
 function sceneGame.levelTimerFunc(event)
-    cancelTweensOnNode(sceneGame.levelTimerNode)
+    --TODO PUT THIS BACK! --cancelTweensOnNode(sceneGame.levelTimerNode)
     
     gameInfo.timeLeft = gameInfo.timeLeft - 1
     event.target.label.text = gameInfo.timeLeft
@@ -500,8 +499,6 @@ function sceneGame:touch(event)
             print("TOUCH END")
             if gameInfo.showDragHelper then
                 board:stopShowingMoves(finger)
-                --TODO: recheck other fingers and remove/add new ones
-                --prob want to edit showMoves to update existing animations if already there
             end
             
             --TODO: also use showMoves when players finish animating, i.e. whenever a player is set back to ready
@@ -538,6 +535,7 @@ function sceneGame:touch(event)
                 self:queueTilesForSlots(0.5, 1)
             end
             
+            board:updateFingerTargets(fingers)
         end
     end
 end

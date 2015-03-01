@@ -248,13 +248,14 @@ function Player.reactivatePlayer(target)
 
     if player.phase == "backtracking" then
         player.phase = "ready"
-        return
+    else
+        -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
+        if not player:tryToMove() then            
+            dbg.print("tryToMove failed in reactivatePlayer(" .. player.id .. ") should have already set phase to ready...")
+        end
     end
     
-    -- try to move recursively; return control (phase=ready) will be set in tryToMove once it fails
-    if not player:tryToMove() then
-        dbg.print("tryToMove failed in reactivatePlayer(" .. player.id .. ") should have already set phase to ready...")
-    end
+    board:updateFingerTargets(fingers) -- available spaces change after player finishes moving
 end
 
 function Player:backtrack()

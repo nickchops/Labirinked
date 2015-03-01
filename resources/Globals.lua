@@ -67,7 +67,7 @@ gameInfo.showDragHelper = true
 gameInfo.levelTime = 60
 gameInfo.level = 1
 gameInfo.levels = {
-    {tileTypes={"floor"}, time=40, width=6, height=3},
+    {tileTypes={"floor"}, time=940, width=6, height=3},
     {tileTypes={"floor", "road"}, time=40, width=6, height=4},
     {tileTypes={"corner", "road", "threeway"}, time=40, width=6, height=4},
     {tileTypes={"floor", "corner", "road", "threeway", "blocker"}, time=40, width=7, height=4},

@@ -270,7 +270,9 @@ function tilePlaced(target)
         if target.players then
             for k,player in pairs(target.players) do
                 dbg.print("CALLING TRY MOVE FOR: " .. player.id)
-                player:tryToMove() -- if other player's move already completed the level, this just returns
+                if not player:tryToMove() then -- if other player's move already completed the level, this just returns
+                    board:updateFingerTargets(fingers)
+                end
             end
         end
     end
