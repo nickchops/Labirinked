@@ -375,14 +375,16 @@ function GameBoard:showMoves(finger)
             
             -- hide if no longer valid on update
             if target and not nearPlayers then
+                dbg.print("x:" .. x .. ", y:" .. y .. ", index:" .. index)
+                dbg.print("target type: " .. type(target))
                 cancelTweensOnNode(target)
-                tween:to(target {alpha=0, radius=0, alpha=0, strokeWidth=0, strokeAlpha=0,
+                tween:to(target {alpha=0, radius=0, strokeWidth=0, strokeAlpha=0,
                         time=0.3, onComplete=destroyNode})
                 finger.targetMarkers[index] = nil
             -- show new move
             elseif not target and nearPlayers then
                 local xPos,yPos = self:getScreenPosCentre(x,y)
-                target = director:createCircle({xAnchor=0.5, yAnchor=0.5, x=xPos, y=yPos, radius=0,
+                target = director:createCircle({xAnchor=0.5, yAnchor=0.5, x=xPos+finger.targetXOffset, y=yPos, radius=0,
                         color=finger.markerColor, alpha=0, strokeWidth=0, strokeAlpha=0,
                         strokeColor=finger.markerColor})
                 tween:to(target, {alpha=0.3, strokeAlpha=0.25, strokeWidth=2, mode="mirror",
@@ -393,13 +395,14 @@ function GameBoard:showMoves(finger)
     end
     
     if not finger.showingTargets then
-        tween:to(finger.dragTile.sprite, {color={r=finger.color.r, g=finger.color.g, b=finger.color.b},
+        tween:to(finger.dragTile.sprite, {color={r=finger.tileColor.r, g=finger.tileColor.g, b=finger.tileColor.b},
                 mode="mirror", time=1})
         finger.showingTargets = true
     end
 end
 
 function GameBoard:stopShowingMoves(finger)
+    dbg.print(">> stopShowingMoves for finger: " .. finger.id)
     finger.showingTargets = false
     for k,v in pairs(finger.targetMarkers) do
         cancelTweensOnNode(v)
@@ -409,7 +412,7 @@ function GameBoard:stopShowingMoves(finger)
     if finger.dragTile then
         cancelTweensOnNode(finger.dragTile.sprite)
         cancelTweensOnNode(finger.dragTile.sprite)
-        --looks like an engine bug... have to cancel twice here or else it does stop!
+        --looks like an engine bug... have to cancel twice here or else it doesn't stop!
         --likely about tween disaptching vs events/update
         
         tween:to(finger.dragTile.sprite, {color={r=255, g=255, b=255}, time=0.3})
@@ -417,6 +420,7 @@ function GameBoard:stopShowingMoves(finger)
 end
 
 function GameBoard:updateFingerTargets(fingers)
+    dbg.print(">> updateFingerTargets")
     for k,finger in pairs(fingers) do
         if finger.showingTargets then
             board:showMoves(finger) --recheck and update other fingers

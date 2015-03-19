@@ -263,6 +263,7 @@ end
 function tilePlaced(target)
     local tile = target.tile
     tile.finger = nil --allow a finger to pick it up again
+    tile.available = true --for tiles being returned to slots from board
     
     if not tile.startSlot then
         board:addTile(tile.gridX, tile.gridY, tile)
@@ -280,7 +281,7 @@ function tilePlaced(target)
     target.players = nil
 end
 
--- return true = placed in new place on grid
+-- return true = tile successfully moved from queue to grid
 function Tile:setGridTarget(gridX, gridY, nearPlayers)
     self.origin.tile = self
     self.origin.players = nearPlayers
@@ -298,6 +299,7 @@ function Tile:setGridTarget(gridX, gridY, nearPlayers)
         if self.startSlot then
             --back to slot
             tween:to(self.origin, {x=self.startX, y=self.startY, time=0.2, onComplete=tilePlaced})
+        
         else
             --back to where it came from on grid
             

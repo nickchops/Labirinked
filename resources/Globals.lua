@@ -47,10 +47,10 @@ fontMainTitle = "fonts/Default.fnt"
 fontTimer = "fonts/Segoe40pxNumbers.fnt"
 
 textCol = color.black
-goldColor = {231,215,99}
-goldColorDark = {181,165,59}
-
 lineColor = {0,0,0}
+
+fingerColors = {{markerColor={r=200,g=100,b=255}, tileColor={r=230,g=210,b=255}},
+                {markerColor={r=255,g=200,b=100}, tileColor={r=255,g=230,b=210}}}
 
 titleCol = lineColor
 btnCol = color.aliceBlue
@@ -64,6 +64,7 @@ gameInfo.soundOn = true
 gameInfo.lastUserName = "P1 "
 gameInfo.winLose = "lose"
 gameInfo.showDragHelper = true
+gameInfo.canReturnToQueue = true
 gameInfo.levelTime = 60
 gameInfo.level = 1
 gameInfo.levels = {

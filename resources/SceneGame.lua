@@ -87,8 +87,10 @@ function sceneGame:setUp(event)
     --TODO: could allow as many fingers as wanted!
     --      make a fingers class
     fingers = {}
-    fingers[1] = {id=1, phase="ready", markerColor={r=255,g=200,b=100}, color={r=255,g=230,b=210}, targetMarkers={}}
-    fingers[2] = {id=2, phase="ready", markerColor={r=200,g=100,b=255}, color={r=230,g=210,b=255}, targetMarkers={}}
+    fingers[1] = {id=1, phase="ready", markerColor=fingerColors[1].markerColor, tileColor=fingerColors[1].tileColor,
+        targetMarkers={}, targetXOffset=-10}
+    fingers[2] = {id=2, phase="ready", markerColor=fingerColors[2].markerColor, tileColor=fingerColors[2].tileColor,
+        targetMarkers={}, targetXOffset=10}
     --markerColour is for target markers. Those have < 1 alpha so need to be darker/more colourful
     maxFingers = 2
     --add more here to enable more fingers
@@ -136,6 +138,13 @@ function sceneGame:generateTile(tileTypes)
         if dir > 4 then dir = 1 end
     end
     return {tileType=tileType, dir=dir}
+end
+
+function sceneGame:reQueueTile(tile)
+    self.tileQueueSize = self.tileQueueSize + 1
+    self.tileQueue[self.tileQueueSize] = {tileType=tile.tileType, dir=tile.dir}
+    tween:to(tile.origin, {alpha=0, time=0.2, onComplete=destroyNode})
+    --todo: may want to keep the tile and remove from parent and resuse rather than destroying!
 end
 
 function sceneGame:dequeueTile()
@@ -201,6 +210,44 @@ function sceneGame.addTileToSlots(event)
     tween:to(newTile.sprite, {alpha=tileAlpha, time=0.5, onComplete=activateTile})
     newTile.sprite.tile = newTile
     tileSlots[slot] = newTile
+end
+
+--push an existing tile into slot, displacing current tile back into the queue
+--returns target coords on sucess or false if pos not near a slot
+function sceneGame.returnTileToSlots(tile, x, y)
+    dbg.print(">> return tile to slots")
+    if y < tileSlotsY - board.tileWidth/2 or y > tileSlotsY + board.tileWidth/2
+            or x < tileSlotsY - board.tileWidth/2 or y > tileSlotsY + board.tileWidth/2 then
+        return
+    end
+    
+    local tileX = nil
+    local targetSlot = false
+    for i=1,4 do
+        if i % 2 == 1 then
+            tileX = appWidth/2 - (board.tileWidth+tileXSpace)*(i+1)/2 + board.tileWidth/2 - 50
+        else
+            tileX = appWidth/2 + (board.tileWidth+tileXSpace)*i/2 - board.tileWidth/2 + 50
+        end
+        
+        if x > tileX - board.tileWidth and x < tileX + board.tileWidth then
+            targetSlot = i
+            break
+        end
+    end
+    
+    if not targetSlot then
+        return false
+    end
+    
+    self:reQueueTile(oldTile)
+    tileSlots[slot] = tile
+    
+    -- tile is now as if it came from the slot, so will animate back to it
+    tile.available = false
+    tile.startSlot = slot
+    tile.startX = tileX
+    tile.startY = tileSlotsY
 end
 
 function sceneGame:tileSlotsFadeOut(onComplete, duration)
@@ -417,74 +464,82 @@ function sceneGame:touch(event)
     
     local finger = fingers[event.id]
     
-    if event.phase == "began" and finger.phase == "ready" then
-        if y < board.menuHeight then
-            for k,tile in pairs(tileSlots) do
-                if (not tile.finger) and tile.available and
-                        x > tile.startX-board.tileWidth/2 and x < tile.startX+board.tileWidth/2 then
-                    finger.phase = "placingTile"
-                    finger.dragTile = tile
-                    finger.dragTile.finger = finger
-                    finger.startX = x
-                    finger.startY = y
-                    tile:bringToFront()
-                    print("TOUCH START SUCCESS")
-                    finger.dragTile.justPickedUp = true
-                    break
-                elseif tile.finger then
-                    print("TOUCH START tile still has finger already: " .. tile.finger.id)
-                elseif not tile.available then
-                    print("TOUCH START tile not available:")
-                end
-            end
-        else
-            local xGrid
-            local yGrid
-            xGrid, yGrid = board:getNearestGridPos(x,y)
-            if board:hasTile(xGrid, yGrid) then
-                dbg.print("HAS TILE")
-                local gotTile --tile can be valid for both players (but doesnt mean we've won!)
-                for k,player in pairs(players) do
-                    dbg.print("Has tile: check player(" .. player.id .. ") phase=" .. player.phase)
-                    if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
-                        dbg.print("CAN TAKE TILE")
-                        
-                        dbg.print("moving tile, player(" .. player.id .. ") setting phase=" .. player.phase)
+    if event.phase == "began" then
+        finger.tap = true
+        finger.yShow = nil
+        if finger.phase == "ready" then
+            if y < board.menuHeight then
+                for k,tile in pairs(tileSlots) do
+                    if (not tile.finger) and tile.available and
+                            x > tile.startX-board.tileWidth/2 and x < tile.startX+board.tileWidth/2 then
                         finger.phase = "placingTile"
-                        
-                        if not gotTile then
-                            gotTile = board:getAndRemoveTile(xGrid, yGrid, true)
-                            finger.reservedTile = {x=xGrid,y=yGrid}
-                            finger.dragTile = gotTile
-                            finger.startX = x
-                            finger.startY = y
-                            gotTile:bringToFront()
-                            finger.dragTile.justPickedUp = true
+                        finger.dragTile = tile
+                        finger.dragTile.finger = finger
+                        finger.startX = x
+                        finger.startY = y
+                        tile:bringToFront()
+                        print("TOUCH START SUCCESS")
+                        finger.dragTile.justPickedUp = true
+                        break
+                    elseif tile.finger then
+                        print("TOUCH START tile still has finger already: " .. tile.finger.id)
+                    elseif not tile.available then
+                        print("TOUCH START tile not available:")
+                    end
+                end
+            else
+                local xGrid
+                local yGrid
+                xGrid, yGrid = board:getNearestGridPos(x,y)
+                if board:hasTile(xGrid, yGrid) then
+                    dbg.print("HAS TILE")
+                    local gotTile --tile can be valid for both players (but doesnt mean we've won!)
+                    for k,player in pairs(players) do
+                        dbg.print("Has tile: check player(" .. player.id .. ") phase=" .. player.phase)
+                        if player.phase == "ready" and board:canTakeTile(xGrid, yGrid, player) then
+                            dbg.print("CAN TAKE TILE")
+                            
+                            dbg.print("moving tile, player(" .. player.id .. ") setting phase=" .. player.phase)
+                            finger.phase = "placingTile"
+                            
+                            if not gotTile then
+                                gotTile = board:getAndRemoveTile(xGrid, yGrid, true)
+                                finger.reservedTile = {x=xGrid,y=yGrid}
+                                finger.dragTile = gotTile
+                                finger.startX = x
+                                finger.startY = y
+                                gotTile:bringToFront()
+                                finger.dragTile.justPickedUp = true
+                            end
+                            
+                            if xGrid == player.x and yGrid == player.y then
+                                --tile was under a player
+                                dbg.print("!!!! got a player tile")
+                                finger.dragTile.playerTileWasFrom = player
+                                player.phase = "willBacktrack"
+                                --TODO: animate tile removal nicely.....
+                            else
+                                player.phase = "changingTilePos"
+                            end
+                            
+                            if not finger.dragTile.players then finger.dragTile.players={} end
+                            finger.dragTile.players[player.id] = player
                         end
-                        
-                        if xGrid == player.x and yGrid == player.y then
-                            --tile was under a player
-                            dbg.print("!!!! got a player tile")
-                            finger.dragTile.playerTileWasFrom = player
-                            player.phase = "willBacktrack"
-                            --TODO: animate tile removal nicely.....
-                        else
-                            player.phase = "changingTilePos"
-                        end
-                        
-                        if not finger.dragTile.players then finger.dragTile.players={} end
-                        finger.dragTile.players[player.id] = player
                     end
                 end
             end
         end
     elseif finger.phase == "placingTile" then
-        local yShow = y
-        local tap = true
-        if math.abs(finger.startX - x) > tapThreshold or math.abs(finger.startY - y) > tapThreshold then
-            yShow = yShow + ppi*0.7/vr.scale
-            --move tile up by 0.65 inches. Needs scaling for virt res.
-            tap = false
+        if not finger.tap or (math.abs(finger.startX - x) > tapThreshold or math.abs(finger.startY - y) > tapThreshold) then
+            finger.yShow = y + ppi*0.6/vr.scale
+            --move tile up by 0.6 inches.
+            finger.tap = false
+        end
+        
+        local yShow = finger.yShow or y
+        
+        if y < board.menuHeight - board.tileWidth then
+            yShow = y
         end
         
         if event.phase == "moved" then
@@ -505,7 +560,7 @@ function sceneGame:touch(event)
             
             -- tap to rotate. may want to change to two finger rotate. but that might not be intuitive...
             local rotated = false
-            if (board.canRotatePlayerTiles or not finger.dragTile.playerTileWasFrom) and tap then
+            if finger.tap and (board.canRotatePlayerTiles or not finger.dragTile.playerTileWasFrom) then
                 rotated = finger.dragTile:rotateRight()
                 -- we still carry on after this so that player can try to move, tile repositions, flags reset
             end
@@ -514,9 +569,20 @@ function sceneGame:touch(event)
             
             local xGrid,yGrid = board:getNearestGridPos(x,yShow)
             local nearPlayers = board:isValidMove(xGrid, yGrid, finger.dragTile, rotated)
-            local tileWasFromQueue = finger.dragTile:setGridTarget(xGrid, yGrid, nearPlayers)
+            local tileWasFromQueue = nil
+            
+            if gameInfo.canReturnToQueue and not self.startSlot and yGrid < 0 then
+                -- try to return grid tile to slot. deals with slot logic but
+                -- setGridTarget below then actually returns it to the slot
+                self:returnTileToSlots(tile, x, yShow)
+            end
+            
+            tileWasFromQueue = finger.dragTile:setGridTarget(xGrid, yGrid, nearPlayers)
+            
             -- setGridTarget triggers any player updates and animations. And sets or resets
             -- player.phase for each player that was in finger.dragTile.players
+            
+            board:updateFingerTargets(fingers)
             
             if finger.reservedTile then
                 board:freeUpTile(finger.reservedTile)
@@ -525,6 +591,7 @@ function sceneGame:touch(event)
             
             print("TOUCH END resetting finger " .. finger.id)
             finger.phase = "ready"
+            finger.dragTile.playerTileWasFrom = nil
             finger.dragTile = nil
             
             if tileWasFromQueue then --if added a tile from the queue (not dragged from other spot on board) -> new tile
@@ -534,8 +601,6 @@ function sceneGame:touch(event)
                 dbg.print("QUEUE TILE!!!!")
                 self:queueTilesForSlots(0.5, 1)
             end
-            
-            board:updateFingerTargets(fingers)
         end
     end
 end

@@ -37,7 +37,7 @@ function sceneCredits.activateBack()
         tween:from(backButtonHelper.backBtn, {alpha=0, time=0.2})
     end
     
-    director:createLabel({x=260, y=appHeight*0.5, text="Nick Smith: Design and programming\n\n\nRocco: Design, art and music", color=color.black})
+    director:createLabel({x=260, y=appHeight*0.5, text="Nick: Design and programming\n\n\nRocco: Design, art and music", color=color.black})
 end
 
 
