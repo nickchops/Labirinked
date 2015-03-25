@@ -378,7 +378,7 @@ function GameBoard:showMoves(finger)
                 dbg.print("x:" .. x .. ", y:" .. y .. ", index:" .. index)
                 dbg.print("target type: " .. type(target))
                 cancelTweensOnNode(target)
-                tween:to(target {alpha=0, radius=0, strokeWidth=0, strokeAlpha=0,
+                tween:to(target, {alpha=0, radius=0, strokeWidth=0, strokeAlpha=0,
                         time=0.3, onComplete=destroyNode})
                 finger.targetMarkers[index] = nil
             -- show new move

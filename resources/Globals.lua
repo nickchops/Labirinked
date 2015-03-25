@@ -3,7 +3,7 @@
 
 --debugOn = true
 --debugTileTypes = {"threeway"}
-debugTileTypes = {"floor", "corner", "stairAscend", "roadRaised"}
+--debugTileTypes = {"floor", "corner", "stairAscend", "roadRaised"}
 
 --require("mobdebug").start() -- Uncomment for ZeroBrain IDE debuger support
 

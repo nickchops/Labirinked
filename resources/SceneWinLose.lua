@@ -42,9 +42,9 @@ function sceneWinLose.activateButtons()
 
     sceneWinLose:addButton("menu", "image", "menu_button.png", 0, 0, 180, sceneWinLoseTouchMenu)
     if gameInfo.winLose == "win" then
-        sceneWinLose:addButton("goToGame", "image", "next_level.png", 0, -440, 160, sceneWinLoseTouchNextLevel)
+        sceneWinLose:addButton("goToGame", "image", "next_level.png", 0, -440, 180, sceneWinLoseTouchNextLevel)
     else
-        sceneWinLose:addButton("goToGame", "image", "retry.png", 0, -440, 80, sceneWinLoseTouchRetry)
+        sceneWinLose:addButton("goToGame", "image", "retry.png", 0, -440, 100, sceneWinLoseTouchRetry)
     end
     
     sceneWinLose.enableMenu()
