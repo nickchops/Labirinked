@@ -466,7 +466,7 @@ function sceneGame:touch(event)
     
     if event.phase == "began" then
         finger.tap = true
-        finger.yShow = nil
+        finger.yShowOffset = 0
         if finger.phase == "ready" then
             if y < board.menuHeight then
                 for k,tile in pairs(tileSlots) do
@@ -531,16 +531,17 @@ function sceneGame:touch(event)
         end
     elseif finger.phase == "placingTile" then
         if not finger.tap or (math.abs(finger.startX - x) > tapThreshold or math.abs(finger.startY - y) > tapThreshold) then
-            finger.yShow = y + ppi*0.6/vr.scale
+            finger.yShowOffset = ppi*0.6/vr.scale
             --move tile up by 0.6 inches.
             finger.tap = false
         end
         
-        local yShow = finger.yShow or y
-        
-        if y < board.menuHeight - board.tileWidth then
-            yShow = y
+        local moveDist = math.abs(y - finger.startY)
+        if moveDist < finger.yShowOffset then
+            finger.yShowOffset = moveDist
         end
+        
+        local yShow = y + finger.yShowOffset
         
         if event.phase == "moved" then
             finger.dragTile:setPosCentered(x,yShow)
