@@ -570,6 +570,16 @@ function sceneGame:touch(event)
             
             local xGrid,yGrid = board:getNearestGridPos(x,yShow)
             local nearPlayers = board:isValidMove(xGrid, yGrid, finger.dragTile, rotated)
+
+            if not nearPlayers then
+                -- Try nearest adjacent sqaure instead to be forgiving to player
+                local success, xNear,yNear = board:getNearestAdjacentGridPos(x,yShow)
+                if success then
+                    xGrid,yGrid = xNear,yNear
+                    nearPlayers = board:isValidMove(xGrid, yGrid, finger.dragTile, rotated)
+                end
+            end
+
             local tileWasFromQueue = nil
             
             if gameInfo.canReturnToQueue and not self.startSlot and yGrid < 0 then

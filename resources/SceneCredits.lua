@@ -30,7 +30,7 @@ end
 
 function sceneCredits.activateBack()
     backButtonHelper:add({listener=sceneCredits.quit, xCentre=130, yCentre=60, btnWidth=150,
-            btnTexture=btnTexture, pulse=false, activateOnRelease=true, animatePress=true,
+            btnTexture=btnTexture, pulse=true, activateOnRelease=true, animatePress=true,
             deviceKeyOnly=false, drawArrowOnBtn=true, arrowThickness=4})
     
     if backButtonHelper.backBtn then -- in case we change to non-visible on Android etc!

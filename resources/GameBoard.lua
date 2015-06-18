@@ -163,6 +163,51 @@ function GameBoard:getNearestGridPos(x,y)
     return x,y
 end
 
+--[[
+This function finds which of the 4 triangels below the point is in
+in the current square and then gets the adjacent square that
+triangle is next to. Returns false if adjacent square is not in the grid.
+      /\
+   --------
+   | \  / |
+<- |  \/  | ->
+   |  /\  |
+   | /  \ |
+   --------
+      \/  
+      
+]]--
+function GameBoard:getNearestAdjacentGridPos(x,y)
+    x = x-self.origin.x
+    y = y-self.origin.y
+    
+    local xGrid = math.floor(x/self.tileWidth)
+    local yGrid = math.floor(y/self.tileWidth)
+    
+    local xInSquare = x - self.tileWidth*xGrid
+    local yInSquare = y - self.tileWidth*yGrid
+    
+    if xInSquare > yInSquare then --bottom/right
+        if xInSquare + yInSquare > self.tileWidth then --right
+            xGrid = xGrid + 1
+        else --bottom
+            yGrid = yGrid - 1
+        end
+    else --top/left
+        if xInSquare + yInSquare > self.tileWidth then --top
+            yGrid = yGrid + 1
+        else --left
+            xGrid = xGrid - 1
+        end
+    end
+        
+    if xGrid < 0 or xGrid > self.tilesWide-1 or yGrid < 0 or yGrid > self.tilesHigh-1 then
+        return false
+    end
+    
+    return true, xGrid, yGrid
+end
+
 function GameBoard:hasTile(x, y, includeReservedCells)
     local index = self:getTileIndex(x,y)
     if self:getTileAtIndex(index) then

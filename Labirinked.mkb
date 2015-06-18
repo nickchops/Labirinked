@@ -31,8 +31,8 @@ assets
     (resources)
     .
     
-    # Use this when using precompiled (and optionally concatenated) Lua code for performance
-    ["precompiled"]
+    # Base asset set used by both optimisation options
+    [nonCompiled]
     (resources)
     
     # These are engine code that's never pre-compiled,
@@ -57,10 +57,16 @@ assets
     helpers/VirtualResolution.lua
     helpers/BackButton.lua
     
-    # All pre-compiled code will have been generated in the resources-ram folder
-    # You may want to exclude any other files you generate with the simulator
-    # TODO: we should output these to resources-precompiled, not resources-ram!
-    (resources-ram)
+    # Use this to deploy a build using precompiled but not concatenated Lua
+    [precompiledLua]
+    <include nonCompiled>
+    (resources-precompiled)
+    .
+    
+    # Use this to deploy a build using precompiled and concatenated Lua
+    [optimisedLua]
+    <include nonCompiled>
+    (resources-concatenated)
     .
 }
 
